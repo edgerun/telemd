@@ -6,14 +6,16 @@ import (
 	"time"
 )
 
+const TopicSeparator = "/"
+
 var NodeName, _ = os.Hostname()
 var EmptyTelemetry = Telemetry{}
 
 type Telemetry struct {
-	Metric string
-	Node   string
-	Time   time.Time
-	Value  float64
+	Node  string
+	Topic string
+	Time  time.Time
+	Value float64
 }
 
 type TelemetryChannel interface {
@@ -56,12 +58,12 @@ type telemetryChannel struct {
 	C chan Telemetry
 }
 
-func NewTelemetry(metric string, value float64) Telemetry {
+func NewTelemetry(topic string, value float64) Telemetry {
 	return Telemetry{
-		Metric: metric,
-		Node:   NodeName,
-		Time:   time.Now(),
-		Value:  value,
+		Node:  NodeName,
+		Topic: topic,
+		Time:  time.Now(),
+		Value: value,
 	}
 }
 
@@ -87,7 +89,7 @@ func (m Telemetry) UnixTimeString() string {
 }
 
 func (m Telemetry) Print() {
-	fmt.Printf("(%s, %s:%s, %.4f)\n", m.Time, m.Node, m.Metric, m.Value)
+	fmt.Printf("(%s, %s:%s, %.4f)\n", m.Time, m.Node, m.Topic, m.Value)
 }
 
 func (t *telemetryChannel) Channel() chan Telemetry {

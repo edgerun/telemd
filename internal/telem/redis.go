@@ -23,7 +23,7 @@ func report(client *redis.Client, m Telemetry) {
 		panic("Cannot report empty measurement")
 	}
 
-	channel := fmt.Sprintf("telemetry:%s:%s", m.Node, m.Metric)
+	channel := fmt.Sprintf("telem%s%s%s%s", TopicSeparator, m.Node, TopicSeparator, m.Topic)
 	message := fmt.Sprintf("%s %f", m.UnixTimeString(), m.Value)
 	cmd := client.Publish(channel, message)
 	if cmd.Err() != nil {

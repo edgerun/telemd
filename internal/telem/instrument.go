@@ -107,10 +107,10 @@ func (LoadInstrument) MeasureAndReport(channel TelemetryChannel) {
 }
 
 func (instr NetworkDataRateInstrument) MeasureAndReport(channel TelemetryChannel) {
-	iface := instr.Device
+	device := instr.Device
 
-	rxPath := "/sys/class/net/" + iface + "/statistics/rx_bytes"
-	txPath := "/sys/class/net/" + iface + "/statistics/tx_bytes"
+	rxPath := "/sys/class/net/" + device + "/statistics/rx_bytes"
+	txPath := "/sys/class/net/" + device + "/statistics/tx_bytes"
 
 	rxThen, err := ReadLineAndParseInt(rxPath)
 	check(err)
@@ -124,8 +124,8 @@ func (instr NetworkDataRateInstrument) MeasureAndReport(channel TelemetryChannel
 	txNow, err := ReadLineAndParseInt(txPath)
 	check(err)
 
-	channel.Put(NewTelemetry("tx", float64((txNow-txThen)/1000)))
-	channel.Put(NewTelemetry("rx", float64((rxNow-rxThen)/1000)))
+	channel.Put(NewTelemetry("tx"+TopicSeparator+device, float64((txNow-txThen)/1000)))
+	channel.Put(NewTelemetry("rx"+TopicSeparator+device, float64((rxNow-rxThen)/1000)))
 }
 
 // Reads the statistics from https://www.kernel.org/doc/Documentation/block/stat.txt
@@ -159,15 +159,17 @@ func readBlockDeviceStats(dev string) []int64 {
 const sectorSize = 512
 
 func (instr DiskDataRateInstrument) MeasureAndReport(channel TelemetryChannel) {
-	statsThen := readBlockDeviceStats(instr.Device)
+	device := instr.Device
+
+	statsThen := readBlockDeviceStats(device)
 	time.Sleep(1 * time.Second)
-	statsNow := readBlockDeviceStats(instr.Device)
+	statsNow := readBlockDeviceStats(device)
 
 	rd := (statsNow[2] - statsThen[2]) * sectorSize
 	wr := (statsNow[6] - statsThen[6]) * sectorSize
 
-	channel.Put(NewTelemetry("rd", float64(rd)/1000))
-	channel.Put(NewTelemetry("wr", float64(wr)/1000))
+	channel.Put(NewTelemetry("rd"+TopicSeparator+device, float64(rd)/1000))
+	channel.Put(NewTelemetry("wr"+TopicSeparator+device, float64(wr)/1000))
 }
 
 type defaultInstrumentFactory struct{}
