@@ -20,3 +20,15 @@ For example, the CPU utilization of CPU core 0 host `rpi0` could be reported as:
 Or it may report an aggregate value into
 
     telem/rpi0/cpu
+
+Talking back to clients
+-----------------------
+
+Clients listen on the topic
+
+    telemcmd/<hostname>
+
+for commands. Currently, telemc supports the following commands:
+
+* `pause` pauses reporting of metrics
+* `unpause` unpauses report of metrics

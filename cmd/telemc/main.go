@@ -2,6 +2,7 @@ package main
 
 import (
 	"git.dsg.tuwien.ac.at/mc2/go-telemc/internal/telem"
+	"github.com/go-redis/redis/v7"
 	"log"
 	"os"
 	"os/signal"
@@ -22,6 +23,28 @@ func atExit(fn func()) {
 	}()
 }
 
+func commandLoop(pubsub *redis.PubSub, tickers map[string]telem.TelemetryTicker) {
+	for {
+		msg, err := pubsub.ReceiveMessage()
+		if err != nil {
+			break
+		}
+
+		switch msg.Payload {
+		case "pause":
+			for _, ticker := range tickers {
+				ticker.Pause()
+			}
+		case "unpause":
+			for _, ticker := range tickers {
+				ticker.Unpause()
+			}
+		default:
+			log.Println("unhandled command", msg.Payload)
+		}
+	}
+}
+
 func main() {
 	factory := telem.NewInstrumentFactory(runtime.GOARCH)
 
@@ -31,7 +54,7 @@ func main() {
 		"freq": factory.NewCpuFrequencyInstrument(),
 		"load": factory.NewLoadInstrument(),
 		"net":  factory.NewNetworkDataRateInstrument("enp5s0"),
-		"disk":  factory.NewDiskDataRateInstrument("sdc"),
+		"disk": factory.NewDiskDataRateInstrument("sdc"),
 	}
 
 	periods := map[string]time.Duration{
@@ -61,11 +84,16 @@ func main() {
 		}(ticker)
 	}
 
-	// reporter
+	// reporter/command loop
 	client := telem.NewRedisClientFromUrl("redis://localhost")
+
+	pubsub := client.Subscribe("telemcmd" + telem.TopicSeparator + telem.NodeName)
+	go commandLoop(pubsub, tickers)
 
 	// cleanup
 	atExit(func() {
+		_ = pubsub.Close()
+
 		for k, t := range tickers {
 			log.Println("stopping ticker " + k)
 			t.Stop()
