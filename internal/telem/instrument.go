@@ -14,13 +14,16 @@ type CpuUtilInstrument struct{}
 type LoadInstrument struct{}
 type RamInstrument struct{}
 type NetworkDataRateInstrument struct {
-	Iface string
+	Device string
+}
+type DiskDataRateInstrument struct {
+	Device string
 }
 
 // readCpuUtil returns an array of the following values from /proc/stat
 // user, nice, system, idle, iowait, irq, softirq
 func readCpuUtil() []float64 {
-	line, err := readFirstLine("/proc/stat")
+	line, err := ReadFirstLine("/proc/stat")
 	check(err)
 	line = strings.Trim(line, " ")
 	parts := strings.Split(line, " ")
@@ -80,7 +83,7 @@ func (CpuFrequencyInstrument) MeasureAndReport(channel TelemetryChannel) {
 }
 
 func (LoadInstrument) MeasureAndReport(channel TelemetryChannel) {
-	text, err := readFirstLine("/proc/loadavg")
+	text, err := ReadFirstLine("/proc/loadavg")
 	check(err)
 
 	parts := strings.Split(text, " ")
@@ -103,34 +106,68 @@ func (LoadInstrument) MeasureAndReport(channel TelemetryChannel) {
 
 }
 
-func readLineAndParseInt(path string) (int64, error) {
-	line, err := readFirstLine(path)
-	if err != nil {
-		return -1, err
-	}
-	return strconv.ParseInt(line, 10, 64)
-}
-
 func (instr NetworkDataRateInstrument) MeasureAndReport(channel TelemetryChannel) {
-	iface := instr.Iface
+	iface := instr.Device
 
 	rxPath := "/sys/class/net/" + iface + "/statistics/rx_bytes"
 	txPath := "/sys/class/net/" + iface + "/statistics/tx_bytes"
 
-	rxThen, err := readLineAndParseInt(rxPath)
+	rxThen, err := ReadLineAndParseInt(rxPath)
 	check(err)
-	txThen, err := readLineAndParseInt(txPath)
+	txThen, err := ReadLineAndParseInt(txPath)
 	check(err)
 
 	time.Sleep(1 * time.Second)
 
-	rxNow, err := readLineAndParseInt(rxPath)
+	rxNow, err := ReadLineAndParseInt(rxPath)
 	check(err)
-	txNow, err := readLineAndParseInt(txPath)
+	txNow, err := ReadLineAndParseInt(txPath)
 	check(err)
 
 	channel.Put(NewTelemetry("tx", float64((txNow-txThen)/1000)))
 	channel.Put(NewTelemetry("rx", float64((rxNow-rxThen)/1000)))
+}
+
+// Reads the statistics from https://www.kernel.org/doc/Documentation/block/stat.txt
+// and returns an array where the indices correspond to the following values:
+//  0   read I/Os       requests      number of read I/Os processed
+//  1   read merges     requests      number of read I/Os merged with in-queue I/O
+//  2   read sectors    sectors       number of sectors read
+//  3   read ticks      milliseconds  total wait time for read requests
+//  4   write I/Os      requests      number of write I/Os processed
+//  5   write merges    requests      number of write I/Os merged with in-queue I/O
+//  6   write sectors   sectors       number of sectors written
+//  7   write ticks     milliseconds  total wait time for write requests
+//  8   in_flight       requests      number of I/Os currently in flight
+//  9   io_ticks        milliseconds  total time this block device has been active
+// 10   time_in_queue   milliseconds  total wait time for all requests
+// 11   discard I/Os    requests      number of discard I/Os processed
+// 12   discard merges  requests      number of discard I/Os merged with in-queue I/O
+// 13   discard sectors sectors       number of sectors discarded
+// 14   discard ticks   milliseconds  total wait time for discard requests
+func readBlockDeviceStats(dev string) []int64 {
+	path := "/sys/block/" + dev + "/stat"
+
+	line, err := ReadFirstLine(path)
+	check(err)
+
+	values, err := ParseInt64Array(strings.Fields(line))
+	check(err)
+	return values
+}
+
+const sectorSize = 512
+
+func (instr DiskDataRateInstrument) MeasureAndReport(channel TelemetryChannel) {
+	statsThen := readBlockDeviceStats(instr.Device)
+	time.Sleep(1 * time.Second)
+	statsNow := readBlockDeviceStats(instr.Device)
+
+	rd := (statsNow[2] - statsThen[2]) * sectorSize
+	wr := (statsNow[6] - statsThen[6]) * sectorSize
+
+	channel.Put(NewTelemetry("rd", float64(rd)/1000))
+	channel.Put(NewTelemetry("wr", float64(wr)/1000))
 }
 
 type defaultInstrumentFactory struct{}
@@ -147,8 +184,12 @@ func (d defaultInstrumentFactory) NewLoadInstrument() Instrument {
 	return LoadInstrument{}
 }
 
-func (d defaultInstrumentFactory) NewNetworkDataRateInstrument(iface string) Instrument {
-	return NetworkDataRateInstrument{iface}
+func (d defaultInstrumentFactory) NewNetworkDataRateInstrument(device string) Instrument {
+	return NetworkDataRateInstrument{device}
+}
+
+func (d defaultInstrumentFactory) NewDiskDataRateInstrument(device string) Instrument {
+	return DiskDataRateInstrument{device}
 }
 
 type armInstrumentFactory struct {

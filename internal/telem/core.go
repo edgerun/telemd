@@ -40,6 +40,7 @@ type InstrumentFactory interface {
 	NewCpuUtilInstrument() Instrument
 	NewLoadInstrument() Instrument
 	NewNetworkDataRateInstrument(string) Instrument
+	NewDiskDataRateInstrument(string) Instrument
 }
 
 type telemetryTicker struct {

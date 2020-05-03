@@ -31,13 +31,15 @@ func main() {
 		"freq": factory.NewCpuFrequencyInstrument(),
 		"load": factory.NewLoadInstrument(),
 		"net":  factory.NewNetworkDataRateInstrument("enp5s0"),
+		"disk":  factory.NewDiskDataRateInstrument("sdc"),
 	}
 
 	periods := map[string]time.Duration{
 		"cpu":  500 * time.Millisecond,
 		"freq": 250 * time.Millisecond,
 		"load": 5 * time.Second,
-		"net":  1 * time.Second,
+		"net":  500 * time.Millisecond,
+		"disk": 500 * time.Millisecond,
 	}
 
 	// main channel for communicating telemetry data
