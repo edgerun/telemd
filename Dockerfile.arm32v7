@@ -6,7 +6,7 @@ FROM golang as builder
 
 ADD . /go/src/git.dsg.tuwien.ac.at/mc2/go-telemc
 WORKDIR /go/src/git.dsg.tuwien.ac.at/mc2/go-telemc
-RUN CGO_ENABLED=0 GOARCH=arm go build -v -o /usr/local/bin/telemc cmd/telemc/main.go
+RUN CGO_ENABLED=0 GOARCH=arm GOARM=7 go build -v -o /usr/local/bin/telemc cmd/telemc/main.go
 
 #############
 ### prod ###
