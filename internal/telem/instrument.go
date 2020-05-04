@@ -4,13 +4,15 @@ import (
 	"bufio"
 	"log"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 )
 
-type CpuFrequencyInstrument struct{}
+type CpuInfoFrequencyInstrument struct{}
+type CpuScalingFrequencyInstrument struct{}
 type CpuUtilInstrument struct{}
 type LoadInstrument struct{}
 type RamInstrument struct{}
@@ -48,7 +50,7 @@ func (CpuUtilInstrument) MeasureAndReport(channel TelemetryChannel) {
 	channel.Put(NewTelemetry("cpu", val))
 }
 
-func (CpuFrequencyInstrument) MeasureAndReport(channel TelemetryChannel) {
+func (CpuInfoFrequencyInstrument) MeasureAndReport(channel TelemetryChannel) {
 	file, err := os.Open("/proc/cpuinfo")
 	check(err)
 	defer func() {
@@ -81,6 +83,20 @@ func (CpuFrequencyInstrument) MeasureAndReport(channel TelemetryChannel) {
 	}
 
 	channel.Put(NewTelemetry("freq", sum))
+}
+
+var cpuScalingFiles, _ = filepath.Glob("/sys/devices/system/cpu/cpu[0-9]*/cpufreq/scaling_cur_freq")
+
+func (c CpuScalingFrequencyInstrument) MeasureAndReport(channel TelemetryChannel) {
+	var sum int64
+
+	for _, match := range cpuScalingFiles {
+		value, err := ReadLineAndParseInt(match)
+		check(err)
+		sum += value
+	}
+
+	channel.Put(NewTelemetry("freq", float64(sum)))
 }
 
 func (LoadInstrument) MeasureAndReport(channel TelemetryChannel) {
@@ -195,7 +211,7 @@ func (instr DiskDataRateInstrument) MeasureAndReport(channel TelemetryChannel) {
 type defaultInstrumentFactory struct{}
 
 func (d defaultInstrumentFactory) NewCpuFrequencyInstrument() Instrument {
-	return CpuFrequencyInstrument{}
+	return CpuScalingFrequencyInstrument{}
 }
 
 func (d defaultInstrumentFactory) NewCpuUtilInstrument() Instrument {
