@@ -39,10 +39,12 @@ func commandLoop(pubsub *redis.PubSub, tickers map[string]telem.TelemetryTicker)
 
 		switch msg.Payload {
 		case "pause":
+			log.Printf("pausing %d tickers\n", len(tickers))
 			for _, ticker := range tickers {
 				ticker.Pause()
 			}
 		case "unpause":
+			log.Printf("unpausing %d tickers\n", len(tickers))
 			for _, ticker := range tickers {
 				ticker.Unpause()
 			}
