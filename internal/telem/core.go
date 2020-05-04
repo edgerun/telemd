@@ -41,8 +41,8 @@ type InstrumentFactory interface {
 	NewCpuFrequencyInstrument() Instrument
 	NewCpuUtilInstrument() Instrument
 	NewLoadInstrument() Instrument
-	NewNetworkDataRateInstrument(string) Instrument
-	NewDiskDataRateInstrument(string) Instrument
+	NewNetworkDataRateInstrument([]string) Instrument
+	NewDiskDataRateInstrument([]string) Instrument
 }
 
 type telemetryTicker struct {

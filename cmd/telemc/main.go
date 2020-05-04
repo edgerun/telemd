@@ -48,15 +48,18 @@ func commandLoop(pubsub *redis.PubSub, tickers map[string]telem.TelemetryTicker)
 func main() {
 	factory := telem.NewInstrumentFactory(runtime.GOARCH)
 
-	// TODO: externalize into config
+	networkDevices := []string {"enp5s0", "docker0"}
+	blockDevices := []string {"sdc"}
+
 	instruments := map[string]telem.Instrument{
 		"cpu":  factory.NewCpuUtilInstrument(),
 		"freq": factory.NewCpuFrequencyInstrument(),
 		"load": factory.NewLoadInstrument(),
-		"net":  factory.NewNetworkDataRateInstrument("enp5s0"),
-		"disk": factory.NewDiskDataRateInstrument("sdc"),
+		"net":  factory.NewNetworkDataRateInstrument(networkDevices),
+		"disk": factory.NewDiskDataRateInstrument(blockDevices),
 	}
 
+	// TODO: externalize into config
 	periods := map[string]time.Duration{
 		"cpu":  500 * time.Millisecond,
 		"freq": 250 * time.Millisecond,

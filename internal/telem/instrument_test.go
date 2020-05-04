@@ -18,7 +18,7 @@ func TestReadBlockDeviceStats(t *testing.T) {
 
 func TestDiskDataRateInstrument_MeasureAndReport(t *testing.T) {
 	tc := NewTelemetryChannel()
-	instrument := DiskDataRateInstrument{"loop0"}
+	instrument := DiskDataRateInstrument{[]string{"loop0"}}
 
 	go instrument.MeasureAndReport(tc)
 	ch := tc.Channel()

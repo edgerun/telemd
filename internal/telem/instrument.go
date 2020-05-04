@@ -6,6 +6,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -14,10 +15,10 @@ type CpuUtilInstrument struct{}
 type LoadInstrument struct{}
 type RamInstrument struct{}
 type NetworkDataRateInstrument struct {
-	Device string
+	Devices []string
 }
 type DiskDataRateInstrument struct {
-	Device string
+	Devices []string
 }
 
 // readCpuUtil returns an array of the following values from /proc/stat
@@ -107,25 +108,34 @@ func (LoadInstrument) MeasureAndReport(channel TelemetryChannel) {
 }
 
 func (instr NetworkDataRateInstrument) MeasureAndReport(channel TelemetryChannel) {
-	device := instr.Device
+	var wg sync.WaitGroup
+	wg.Add(len(instr.Devices))
+	defer wg.Wait()
 
-	rxPath := "/sys/class/net/" + device + "/statistics/rx_bytes"
-	txPath := "/sys/class/net/" + device + "/statistics/tx_bytes"
+	measureAndReport := func(device string) {
+		rxPath := "/sys/class/net/" + device + "/statistics/rx_bytes"
+		txPath := "/sys/class/net/" + device + "/statistics/tx_bytes"
 
-	rxThen, err := ReadLineAndParseInt(rxPath)
-	check(err)
-	txThen, err := ReadLineAndParseInt(txPath)
-	check(err)
+		rxThen, err := ReadLineAndParseInt(rxPath)
+		check(err)
+		txThen, err := ReadLineAndParseInt(txPath)
+		check(err)
 
-	time.Sleep(1 * time.Second)
+		time.Sleep(1 * time.Second)
 
-	rxNow, err := ReadLineAndParseInt(rxPath)
-	check(err)
-	txNow, err := ReadLineAndParseInt(txPath)
-	check(err)
+		rxNow, err := ReadLineAndParseInt(rxPath)
+		check(err)
+		txNow, err := ReadLineAndParseInt(txPath)
+		check(err)
 
-	channel.Put(NewTelemetry("tx"+TopicSeparator+device, float64((txNow-txThen)/1000)))
-	channel.Put(NewTelemetry("rx"+TopicSeparator+device, float64((rxNow-rxThen)/1000)))
+		channel.Put(NewTelemetry("tx"+TopicSeparator+device, float64((txNow-txThen)/1000)))
+		channel.Put(NewTelemetry("rx"+TopicSeparator+device, float64((rxNow-rxThen)/1000)))
+		wg.Done()
+	}
+
+	for _, device := range instr.Devices {
+		go measureAndReport(device)
+	}
 }
 
 // Reads the statistics from https://www.kernel.org/doc/Documentation/block/stat.txt
@@ -159,17 +169,27 @@ func readBlockDeviceStats(dev string) []int64 {
 const sectorSize = 512
 
 func (instr DiskDataRateInstrument) MeasureAndReport(channel TelemetryChannel) {
-	device := instr.Device
+	var wg sync.WaitGroup
+	wg.Add(len(instr.Devices))
+	defer wg.Wait()
 
-	statsThen := readBlockDeviceStats(device)
-	time.Sleep(1 * time.Second)
-	statsNow := readBlockDeviceStats(device)
+	measureAndReport := func(device string) {
+		defer wg.Done()
 
-	rd := (statsNow[2] - statsThen[2]) * sectorSize
-	wr := (statsNow[6] - statsThen[6]) * sectorSize
+		statsThen := readBlockDeviceStats(device)
+		time.Sleep(1 * time.Second)
+		statsNow := readBlockDeviceStats(device)
 
-	channel.Put(NewTelemetry("rd"+TopicSeparator+device, float64(rd)/1000))
-	channel.Put(NewTelemetry("wr"+TopicSeparator+device, float64(wr)/1000))
+		rd := (statsNow[2] - statsThen[2]) * sectorSize
+		wr := (statsNow[6] - statsThen[6]) * sectorSize
+
+		channel.Put(NewTelemetry("rd"+TopicSeparator+device, float64(rd)/1000))
+		channel.Put(NewTelemetry("wr"+TopicSeparator+device, float64(wr)/1000))
+	}
+
+	for _, device := range instr.Devices {
+		go measureAndReport(device)
+	}
 }
 
 type defaultInstrumentFactory struct{}
@@ -186,12 +206,12 @@ func (d defaultInstrumentFactory) NewLoadInstrument() Instrument {
 	return LoadInstrument{}
 }
 
-func (d defaultInstrumentFactory) NewNetworkDataRateInstrument(device string) Instrument {
-	return NetworkDataRateInstrument{device}
+func (d defaultInstrumentFactory) NewNetworkDataRateInstrument(devices []string) Instrument {
+	return NetworkDataRateInstrument{devices}
 }
 
-func (d defaultInstrumentFactory) NewDiskDataRateInstrument(device string) Instrument {
-	return DiskDataRateInstrument{device}
+func (d defaultInstrumentFactory) NewDiskDataRateInstrument(devices []string) Instrument {
+	return DiskDataRateInstrument{devices}
 }
 
 type armInstrumentFactory struct {
