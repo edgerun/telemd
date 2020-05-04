@@ -7,10 +7,17 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
 )
+
+func check(err error) {
+	if err != nil {
+		panic(err)
+	}
+}
 
 func atExit(fn func()) {
 	sigs := make(chan os.Signal, 1)
@@ -45,18 +52,29 @@ func commandLoop(pubsub *redis.PubSub, tickers map[string]telem.TelemetryTicker)
 	}
 }
 
+func getNetworkDevices() []string {
+	// TODO: consider environment config
+	return telem.ListFilterDir("/sys/class/net", func(info os.FileInfo) bool {
+		return !info.IsDir() && info.Name() != "lo"
+	})
+}
+
+func getBlockDevices() []string {
+	// TODO: consider environment config
+	return telem.ListFilterDir("/sys/block", func(info os.FileInfo) bool {
+		return !info.IsDir() && !strings.HasPrefix(info.Name(), "loop")
+	})
+}
+
 func main() {
 	factory := telem.NewInstrumentFactory(runtime.GOARCH)
-
-	networkDevices := []string {"enp5s0", "docker0"}
-	blockDevices := []string {"sdc"}
 
 	instruments := map[string]telem.Instrument{
 		"cpu":  factory.NewCpuUtilInstrument(),
 		"freq": factory.NewCpuFrequencyInstrument(),
 		"load": factory.NewLoadInstrument(),
-		"net":  factory.NewNetworkDataRateInstrument(networkDevices),
-		"disk": factory.NewDiskDataRateInstrument(blockDevices),
+		"net":  factory.NewNetworkDataRateInstrument(getNetworkDevices()),
+		"disk": factory.NewDiskDataRateInstrument(getBlockDevices()),
 	}
 
 	// TODO: externalize into config

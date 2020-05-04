@@ -2,6 +2,7 @@ package telem
 
 import (
 	"bufio"
+	"io/ioutil"
 	"os"
 	"strconv"
 )
@@ -10,6 +11,21 @@ func check(err error) {
 	if err != nil {
 		panic(err)
 	}
+}
+
+func ListFilterDir(dirname string, predicate func(info os.FileInfo) bool) []string {
+	dir, err := ioutil.ReadDir(dirname)
+	check(err)
+
+	files := make([]string, 0)
+
+	for _, f := range dir {
+		if predicate(f) {
+			files = append(files, f.Name())
+		}
+	}
+
+	return files
 }
 
 func ParseInt64Array(arr []string) ([]int64, error) {
