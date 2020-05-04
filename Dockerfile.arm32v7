@@ -1,0 +1,17 @@
+# syntax=docker/dockerfile:experimental
+#############
+### build ###
+#############
+FROM golang as builder
+
+ADD . /go/src/git.dsg.tuwien.ac.at/mc2/go-telemc
+WORKDIR /go/src/git.dsg.tuwien.ac.at/mc2/go-telemc
+RUN CGO_ENABLED=0 GOARCH=arm go build -v -o /usr/local/bin/telemc cmd/telemc/main.go
+
+#############
+### prod ###
+#############
+FROM arm32v7/alpine
+COPY --from=builder /usr/local/bin /usr/local/bin
+
+ENTRYPOINT telemc
