@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"strconv"
+	"strings"
 )
 
 func check(err error) {
@@ -67,4 +68,16 @@ func ReadLineAndParseInt(path string) (int64, error) {
 		return -1, err
 	}
 	return strconv.ParseInt(line, 10, 64)
+}
+
+func NetworkDevices() []string {
+	return ListFilterDir("/sys/class/net", func(info os.FileInfo) bool {
+		return !info.IsDir() && info.Name() != "lo"
+	})
+}
+
+func BlockDevices() []string {
+	return ListFilterDir("/sys/block", func(info os.FileInfo) bool {
+		return !info.IsDir() && !strings.HasPrefix(info.Name(), "loop")
+	})
 }

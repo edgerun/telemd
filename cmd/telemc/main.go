@@ -1,13 +1,13 @@
 package main
 
 import (
+	"git.dsg.tuwien.ac.at/mc2/go-telemc/internal/env"
 	"git.dsg.tuwien.ac.at/mc2/go-telemc/internal/telem"
 	"github.com/go-redis/redis/v7"
 	"log"
 	"os"
 	"os/signal"
 	"runtime"
-	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -52,39 +52,23 @@ func commandLoop(pubsub *redis.PubSub, tickers map[string]telem.TelemetryTicker)
 	}
 }
 
-func getNetworkDevices() []string {
-	// TODO: consider environment config
-	return telem.ListFilterDir("/sys/class/net", func(info os.FileInfo) bool {
-		return !info.IsDir() && info.Name() != "lo"
-	})
-}
-
-func getBlockDevices() []string {
-	// TODO: consider environment config
-	return telem.ListFilterDir("/sys/block", func(info os.FileInfo) bool {
-		return !info.IsDir() && !strings.HasPrefix(info.Name(), "loop")
-	})
-}
-
 func main() {
+	cfg := telem.NewDefaultApplicationConfig()
+	cfg.LoadFromEnvironment(env.OsEnv)
+
 	factory := telem.NewInstrumentFactory(runtime.GOARCH)
 
 	instruments := map[string]telem.Instrument{
 		"cpu":  factory.NewCpuUtilInstrument(),
 		"freq": factory.NewCpuFrequencyInstrument(),
 		"load": factory.NewLoadInstrument(),
-		"net":  factory.NewNetworkDataRateInstrument(getNetworkDevices()),
-		"disk": factory.NewDiskDataRateInstrument(getBlockDevices()),
+		"net":  factory.NewNetworkDataRateInstrument(cfg.Instruments.Net.Devices),
+		"disk": factory.NewDiskDataRateInstrument(cfg.Instruments.Disk.Devices),
 	}
 
 	// TODO: externalize into config
-	periods := map[string]time.Duration{
-		"cpu":  500 * time.Millisecond,
-		"freq": 250 * time.Millisecond,
-		"load": 5 * time.Second,
-		"net":  500 * time.Millisecond,
-		"disk": 500 * time.Millisecond,
-	}
+	periods := 	cfg.Agent.Periods
+	telem.NodeName = cfg.NodeName
 
 	// main channel for communicating telemetry data
 	telemetryChannel := telem.NewTelemetryChannel()
@@ -106,7 +90,7 @@ func main() {
 	}
 
 	// reporter/command loop
-	client := telem.NewRedisClientFromUrl("redis://localhost")
+	client := telem.NewRedisClientFromUrl(cfg.Redis.URL)
 
 	pubsub := client.Subscribe("telemcmd" + telem.TopicSeparator + telem.NodeName)
 	go commandLoop(pubsub, tickers)
