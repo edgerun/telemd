@@ -32,3 +32,17 @@ for commands. Currently, telemc supports the following commands:
 
 * `pause` pauses reporting of metrics
 * `unpause` unpauses report of metrics
+
+Parameters
+----------
+
+The `telemc` command allows the following parameters via environment variables.
+
+| Variable | Default | Description |
+|---|---|---|
+| `telemc_node_name`    | `$HOST`       | The node name determines the value for `<hostname>` in the topics |
+| `telemc_redis_host`   | `localhost`   | The redis host to connect to |
+| `telemc_redis_port`   | `6379`        | The redis port to connect to |
+| `telemc_redis_url`    |               | Can be used to specify the redis URL (e.g., `redis://localhost:1234`). Overwrites anything set to `telemc_redis_host`.
+| `telemc_net_devices`  | all           | A list of network devices to be monitored, e.g. `wlan0 eth0`. Monitors all devices per default |
+| `telemc_disk_devices` | all           | A list of block devices to be monitored, e.g. `sda sdc sdd0`. Monitors all devices per default |
