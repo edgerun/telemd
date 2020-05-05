@@ -13,7 +13,7 @@ fi
 cd $PROJECT_ROOT
 
 # registry/group/repository/image
-IMAGE=git.dsg.tuwien.ac.at:5005/mc2/go-telemetry/telemc
+IMAGE=git.dsg.tuwien.ac.at:5005/mc2/go-telemetry/telemd
 
 docker build -t ${IMAGE}:${VERSION}-amd64 -f build/package/telemd/Dockerfile.amd64 .
 docker build -t ${IMAGE}:${VERSION}-arm32v7 -f build/package/telemd/Dockerfile.arm32v7 .
