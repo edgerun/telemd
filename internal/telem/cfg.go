@@ -52,29 +52,29 @@ func NewDefaultApplicationConfig() *ApplicationConfig {
 
 func (cfg *ApplicationConfig) LoadFromEnvironment(env env.Environment) {
 
-	if name, ok := env.Lookup("telemc_node_name"); ok {
+	if name, ok := env.Lookup("telemd_node_name"); ok {
 		cfg.NodeName = name
 	}
 
-	if url, ok := env.Lookup("telemc_redis_url"); ok {
+	if url, ok := env.Lookup("telemd_redis_url"); ok {
 		cfg.Redis.URL = url
-	} else if host, ok := env.Lookup("telemc_redis_host"); ok {
-		if port, ok := env.Lookup("telemc_redis_port"); ok {
+	} else if host, ok := env.Lookup("telemd_redis_host"); ok {
+		if port, ok := env.Lookup("telemd_redis_port"); ok {
 			cfg.Redis.URL = "redis://" + host + ":" + port
 		} else {
 			cfg.Redis.URL = "redis://" + host
 		}
 	}
 
-	if devices, ok, err := env.LookupFields("telemc_net_devices"); err == nil && ok {
+	if devices, ok, err := env.LookupFields("telemd_net_devices"); err == nil && ok {
 		cfg.Instruments.Net.Devices = devices
 	} else if err != nil {
-		log.Fatal("Error reading telemc_net_devices", err)
+		log.Fatal("Error reading telemd_net_devices", err)
 	}
-	if devices, ok, err := env.LookupFields("telemc_disk_devices"); err == nil && ok {
+	if devices, ok, err := env.LookupFields("telemd_disk_devices"); err == nil && ok {
 		cfg.Instruments.Disk.Devices = devices
 	} else if err != nil {
-		log.Fatal("Error reading telemc_disk_devices", err)
+		log.Fatal("Error reading telemd_disk_devices", err)
 	}
 
 }

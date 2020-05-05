@@ -17,8 +17,8 @@ func TestApplicationConfig_ReadFromEnvironment(t *testing.T) {
 	cfg := NewDefaultApplicationConfig()
 	e := env.OsEnv
 
-	e.Set("telemc_redis_host", "192.168.99.1")
-	e.Set("telemc_redis_port", "1234")
+	e.Set("telemd_redis_host", "192.168.99.1")
+	e.Set("telemd_redis_port", "1234")
 
 	cfg.LoadFromEnvironment(env.OsEnv)
 
