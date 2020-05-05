@@ -1,12 +1,12 @@
-go-telemc
-=========
+go-telemetry
+============
 
-A symmetry telemetry push client written in go
+A symmetry telemetry library written in go
 
 Topic schema
 ------------
 
-telemc reports telemetry data into (Redis) topics.
+telemd reports telemetry data into (Redis) topics.
 
 The topic schema is as follows. It starts with the keyword `telem`, followed by the hostname that reports the telemetry,
 the specific metric being reported, and optionally the subsystem (e.g., a specific network device or disk).
@@ -28,7 +28,7 @@ Clients listen on the topic
 
     telemcmd/<hostname>
 
-for commands. Currently, telemc supports the following commands:
+for commands. Currently, telemd supports the following commands:
 
 * `pause` pauses reporting of metrics
 * `unpause` unpauses report of metrics

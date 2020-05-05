@@ -1,7 +1,7 @@
 package telem
 
 import (
-	"git.dsg.tuwien.ac.at/mc2/go-telemc/internal/env"
+	"git.dsg.tuwien.ac.at/mc2/go-telemetry/internal/env"
 	"log"
 	"os"
 	"time"

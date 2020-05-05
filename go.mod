@@ -1,4 +1,4 @@
-module git.dsg.tuwien.ac.at/mc2/go-telemc
+module git.dsg.tuwien.ac.at/mc2/go-telemetry
 
 go 1.14
 
