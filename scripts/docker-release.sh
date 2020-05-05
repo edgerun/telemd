@@ -15,8 +15,8 @@ cd $PROJECT_ROOT
 # registry/group/repository/image
 IMAGE=git.dsg.tuwien.ac.at:5005/mc2/go-telemetry/telemc
 
-docker build -t ${IMAGE}:${VERSION}-amd64 -f Dockerfile.amd64 .
-docker build -t ${IMAGE}:${VERSION}-arm32v7 -f Dockerfile.arm32v7 .
+docker build -t ${IMAGE}:${VERSION}-amd64 -f build/package/telemd/Dockerfile.amd64 .
+docker build -t ${IMAGE}:${VERSION}-arm32v7 -f build/package/telemd/Dockerfile.arm32v7 .
 
 export DOCKER_CLI_EXPERIMENTAL=enabled
 
