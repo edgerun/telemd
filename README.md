@@ -3,8 +3,21 @@ go-telemetry
 
 A symmetry telemetry library written in go
 
-Topic schema
-------------
+Build
+-----
+
+To build the `telemd` binary using your local go installation run:
+
+    go build -o bin/telemd cmd/telemd/main.go
+
+To build Docker images for local usage (without a go installation) run:
+
+    scripts/docker-build.sh
+
+Usage
+-----
+
+### Topic schema
 
 telemd reports telemetry data into (Redis) topics.
 
@@ -21,8 +34,7 @@ Or it may report an aggregate value into
 
     telem/rpi0/cpu
 
-Talking back to clients
------------------------
+### Talking back to clients
 
 Clients listen on the topic
 
@@ -33,8 +45,7 @@ for commands. Currently, telemd supports the following commands:
 * `pause` pauses reporting of metrics
 * `unpause` unpauses report of metrics
 
-Telemetry Daemon Parameters
----------------------------
+### Telemetry Daemon Parameters
 
 The `telemd` command allows the following parameters via environment variables.
 
