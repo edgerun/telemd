@@ -8,11 +8,11 @@ Build
 
 To build the `telemd` binary using your local go installation run:
 
-    go build -o bin/telemd cmd/telemd/main.go
+    make telemd
 
 To build Docker images for local usage (without a go installation) run:
 
-    scripts/docker-build.sh
+    make docker
 
 Usage
 -----
