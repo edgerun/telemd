@@ -42,7 +42,7 @@ func NewDefaultConfig() *Config {
 
 	cfg.Agent.Periods = map[string]time.Duration{
 		"cpu":  500 * time.Millisecond,
-		"freq": 250 * time.Millisecond,
+		"freq": 500 * time.Millisecond,
 		"load": 5 * time.Second,
 		"net":  500 * time.Millisecond,
 		"disk": 500 * time.Millisecond,
