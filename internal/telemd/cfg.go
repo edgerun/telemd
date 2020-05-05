@@ -1,13 +1,14 @@
-package telem
+package telemd
 
 import (
 	"git.dsg.tuwien.ac.at/mc2/go-telemetry/internal/env"
+	"git.dsg.tuwien.ac.at/mc2/go-telemetry/internal/telem"
 	"log"
 	"os"
 	"time"
 )
 
-type ApplicationConfig struct {
+type Config struct {
 	NodeName string
 	Redis    struct {
 		URL string
@@ -25,19 +26,19 @@ type ApplicationConfig struct {
 	}
 }
 
-func NewApplicationConfig() *ApplicationConfig {
-	return &ApplicationConfig{}
+func NewConfig() *Config {
+	return &Config{}
 }
 
-func NewDefaultApplicationConfig() *ApplicationConfig {
-	cfg := NewApplicationConfig()
+func NewDefaultConfig() *Config {
+	cfg := NewConfig()
 
 	cfg.NodeName, _ = os.Hostname()
 
 	cfg.Redis.URL = "redis://localhost"
 
-	cfg.Instruments.Net.Devices = NetworkDevices()
-	cfg.Instruments.Disk.Devices = BlockDevices()
+	cfg.Instruments.Net.Devices = telem.NetworkDevices()
+	cfg.Instruments.Disk.Devices = telem.BlockDevices()
 
 	cfg.Agent.Periods = map[string]time.Duration{
 		"cpu":  500 * time.Millisecond,
@@ -50,7 +51,7 @@ func NewDefaultApplicationConfig() *ApplicationConfig {
 	return cfg
 }
 
-func (cfg *ApplicationConfig) LoadFromEnvironment(env env.Environment) {
+func (cfg *Config) LoadFromEnvironment(env env.Environment) {
 
 	if name, ok := env.Lookup("telemd_node_name"); ok {
 		cfg.NodeName = name

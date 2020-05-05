@@ -1,4 +1,4 @@
-package telem
+package telemd
 
 import (
 	env "git.dsg.tuwien.ac.at/mc2/go-telemetry/internal/env"
@@ -6,7 +6,7 @@ import (
 )
 
 func TestNewDefaultApplicationConfig(t *testing.T) {
-	cfg := NewDefaultApplicationConfig()
+	cfg := NewDefaultConfig()
 
 	if cfg.Redis.URL != "redis://localhost" {
 		t.Error("Unexpected default redis URL")
@@ -14,7 +14,7 @@ func TestNewDefaultApplicationConfig(t *testing.T) {
 }
 
 func TestApplicationConfig_ReadFromEnvironment(t *testing.T) {
-	cfg := NewDefaultApplicationConfig()
+	cfg := NewDefaultConfig()
 	e := env.OsEnv
 
 	e.Set("telemd_redis_host", "192.168.99.1")

@@ -89,7 +89,7 @@ func (m Telemetry) UnixTimeString() string {
 }
 
 func (m Telemetry) Print() {
-	fmt.Printf("(%s, %s:%s, %.4f)\n", m.Time, m.Node, m.Topic, m.Value)
+	fmt.Printf("(%s, %s%s%s, %.4f)\n", m.Time, m.Node, TopicSeparator, m.Topic, m.Value)
 }
 
 func (t *telemetryChannel) Channel() chan Telemetry {

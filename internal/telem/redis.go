@@ -1,40 +1,21 @@
 package telem
 
 import (
-	"fmt"
 	"github.com/go-redis/redis/v7"
 )
 
-func NewRedisClient(options *redis.Options) *redis.Client {
+func NewRedisClient(options *redis.Options) (*redis.Client, error) {
 	client := redis.NewClient(options)
+	options.MaxRetries = 100
 	_, err := client.Ping().Result()
-	check(err)
-	return client
+	return client, err
 }
 
-func NewRedisClientFromUrl(url string) *redis.Client {
+func NewRedisClientFromUrl(url string) (*redis.Client, error) {
 	options, err := redis.ParseURL(url)
-	check(err)
+
+	if err != nil {
+		return nil, err
+	}
 	return NewRedisClient(options)
-}
-
-func report(client *redis.Client, m Telemetry) {
-	if m == EmptyTelemetry {
-		panic("Cannot report empty measurement")
-	}
-
-	channel := fmt.Sprintf("telem%s%s%s%s", TopicSeparator, m.Node, TopicSeparator, m.Topic)
-	message := fmt.Sprintf("%s %f", m.UnixTimeString(), m.Value)
-	cmd := client.Publish(channel, message)
-	if cmd.Err() != nil {
-		panic(cmd.Err())
-	}
-}
-
-// RunRedisReporter iterates over the given TelemetryChannel and reports
-// received Telemetry data through the given redis client.
-func RunRedisReporter(client *redis.Client, channel TelemetryChannel) {
-	for t := range channel.Channel() {
-		report(client, t)
-	}
 }
