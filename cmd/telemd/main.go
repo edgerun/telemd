@@ -15,6 +15,8 @@ func main() {
 	cfg := telemd.NewDefaultConfig()
 	cfg.LoadFromEnvironment(env.OsEnv)
 
+	telem.NodeName = cfg.NodeName
+
 	daemon, err := telemd.NewDaemon(cfg)
 	if err != nil {
 		log.Fatal("error creating telemetry daemon: ", err)
