@@ -1,19 +1,28 @@
 # Go parameters
 GOCMD=go
+GOINSTALL=$(GOCMD) install
 GOBUILD=$(GOCMD) build
 GOCLEAN=$(GOCMD) clean
 GOTEST=$(GOCMD) test
 GOGET=$(GOCMD) get
 
-all: test telemd
+CURDIR=$(shell pwd)
+export GOBIN := $(CURDIR)/bin
+
+all: test build-all
+
+build-all:
+	$(GOINSTALL) ./...
 
 telemd:
-	$(GOBUILD) -o bin/telemd -v cmd/telemd/main.go
+	$(GOINSTALL) ./cmd/telemd
+
 test:
 	$(GOTEST) -v ./...
+
 clean:
 	$(GOCLEAN)
-	rm -f bin/telemd
+	rm -rf bin/
 
 docker:
 	scripts/docker-build.sh

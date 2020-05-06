@@ -6,9 +6,9 @@ A symmetry telemetry library written in go
 Build
 -----
 
-To build the `telemd` binary using your local go installation run:
+To build the module's binaries using your local go installation run:
 
-    make telemd
+    make
 
 To build Docker images for local usage (without a go installation) run:
 
