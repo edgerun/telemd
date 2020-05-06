@@ -16,6 +16,7 @@ func main() {
 	cfg.LoadFromEnvironment(env.OsEnv)
 
 	telem.NodeName = cfg.NodeName
+	log.Println("starting telemd for node", telem.NodeName)
 
 	daemon, err := telemd.NewDaemon(cfg)
 	if err != nil {
