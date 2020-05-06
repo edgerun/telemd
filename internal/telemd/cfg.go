@@ -2,9 +2,10 @@ package telemd
 
 import (
 	"git.dsg.tuwien.ac.at/mc2/go-telemetry/internal/env"
-	"git.dsg.tuwien.ac.at/mc2/go-telemetry/internal/telem"
+	"io/ioutil"
 	"log"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -37,8 +38,8 @@ func NewDefaultConfig() *Config {
 
 	cfg.Redis.URL = "redis://localhost"
 
-	cfg.Instruments.Net.Devices = telem.NetworkDevices()
-	cfg.Instruments.Disk.Devices = telem.BlockDevices()
+	cfg.Instruments.Net.Devices = networkDevices()
+	cfg.Instruments.Disk.Devices = blockDevices()
 
 	cfg.Agent.Periods = map[string]time.Duration{
 		"cpu":  500 * time.Millisecond,
@@ -78,4 +79,33 @@ func (cfg *Config) LoadFromEnvironment(env env.Environment) {
 		log.Fatal("Error reading telemd_disk_devices", err)
 	}
 
+}
+
+func listFilterDir(dirname string, predicate func(info os.FileInfo) bool) []string {
+	dir, err := ioutil.ReadDir(dirname)
+	if err != nil {
+		panic(err)
+	}
+
+	files := make([]string, 0)
+
+	for _, f := range dir {
+		if predicate(f) {
+			files = append(files, f.Name())
+		}
+	}
+
+	return files
+}
+
+func networkDevices() []string {
+	return listFilterDir("/sys/class/net", func(info os.FileInfo) bool {
+		return !info.IsDir() && info.Name() != "lo"
+	})
+}
+
+func blockDevices() []string {
+	return listFilterDir("/sys/block", func(info os.FileInfo) bool {
+		return !info.IsDir() && !strings.HasPrefix(info.Name(), "loop")
+	})
 }

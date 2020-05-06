@@ -12,9 +12,9 @@ type Daemon struct {
 	cfg         *Config
 	cmds        *commandChannel
 	telemetry   telem.TelemetryChannel
-	instruments map[string]telem.Instrument
+	instruments map[string]Instrument
 
-	tickers map[string]telem.TelemetryTicker
+	tickers map[string]TelemetryTicker
 }
 
 func NewDaemon(cfg *Config) (*Daemon, error) {
@@ -22,19 +22,19 @@ func NewDaemon(cfg *Config) (*Daemon, error) {
 		cfg:       cfg,
 		telemetry: telem.NewTelemetryChannel(),
 		cmds:      newCommandChannel(),
-		tickers:   make(map[string]telem.TelemetryTicker),
+		tickers:   make(map[string]TelemetryTicker),
 	}
 
-	td.initInstruments(telem.NewInstrumentFactory(runtime.GOARCH))
+	td.initInstruments(NewInstrumentFactory(runtime.GOARCH))
 	td.initTickers()
 
 	return td, nil
 }
 
-func (daemon *Daemon) initInstruments(factory telem.InstrumentFactory) {
+func (daemon *Daemon) initInstruments(factory InstrumentFactory) {
 	cfg := daemon.cfg
 
-	daemon.instruments = map[string]telem.Instrument{
+	daemon.instruments = map[string]Instrument{
 		"cpu":  factory.NewCpuUtilInstrument(),
 		"freq": factory.NewCpuFrequencyInstrument(),
 		"load": factory.NewLoadInstrument(),
@@ -45,7 +45,7 @@ func (daemon *Daemon) initInstruments(factory telem.InstrumentFactory) {
 
 func (daemon *Daemon) initTickers() {
 	for k, instrument := range daemon.instruments {
-		ticker := telem.NewTelemetryTicker(instrument, daemon.telemetry, daemon.cfg.Agent.Periods[k])
+		ticker := NewTelemetryTicker(instrument, daemon.telemetry, daemon.cfg.Agent.Periods[k])
 		daemon.tickers[k] = ticker
 	}
 }
@@ -55,7 +55,7 @@ func (daemon *Daemon) startTickers() *sync.WaitGroup {
 
 	// start tickers and add to wait group
 	for _, ticker := range daemon.tickers {
-		go func(t telem.TelemetryTicker) {
+		go func(t TelemetryTicker) {
 			wg.Add(1)
 			t.Run()
 			wg.Done()

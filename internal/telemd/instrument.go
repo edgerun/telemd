@@ -1,7 +1,8 @@
-package telem
+package telemd
 
 import (
 	"bufio"
+	"git.dsg.tuwien.ac.at/mc2/go-telemetry/internal/telem"
 	"log"
 	"os"
 	"path/filepath"
@@ -10,6 +11,20 @@ import (
 	"sync"
 	"time"
 )
+
+type Instrument interface {
+	// MeasureAndReport executes a measurement, creates appropriate Telemetry
+	// instances, and put them into the given TelemetryChannel.
+	MeasureAndReport(telemetry telem.TelemetryChannel)
+}
+
+type InstrumentFactory interface {
+	NewCpuFrequencyInstrument() Instrument
+	NewCpuUtilInstrument() Instrument
+	NewLoadInstrument() Instrument
+	NewNetworkDataRateInstrument([]string) Instrument
+	NewDiskDataRateInstrument([]string) Instrument
+}
 
 type CpuInfoFrequencyInstrument struct{}
 type CpuScalingFrequencyInstrument struct{}
@@ -26,7 +41,7 @@ type DiskDataRateInstrument struct {
 // readCpuUtil returns an array of the following values from /proc/stat
 // user, nice, system, idle, iowait, irq, softirq
 func readCpuUtil() []float64 {
-	line, err := ReadFirstLine("/proc/stat")
+	line, err := readFirstLine("/proc/stat")
 	check(err)
 	line = strings.Trim(line, " ")
 	parts := strings.Split(line, " ")
@@ -41,16 +56,16 @@ func readCpuUtil() []float64 {
 	return values
 }
 
-func (CpuUtilInstrument) MeasureAndReport(channel TelemetryChannel) {
+func (CpuUtilInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
 	then := readCpuUtil()
 	time.Sleep(500 * time.Millisecond)
 	now := readCpuUtil()
 
 	val := (now[0] - then[0] + now[2] - then[2]) * 100. / (now[0] - then[0] + now[2] - then[2] + now[3] - then[3])
-	channel.Put(NewTelemetry("cpu", val))
+	channel.Put(telem.NewTelemetry("cpu", val))
 }
 
-func (CpuInfoFrequencyInstrument) MeasureAndReport(channel TelemetryChannel) {
+func (CpuInfoFrequencyInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
 	file, err := os.Open("/proc/cpuinfo")
 	check(err)
 	defer func() {
@@ -82,25 +97,25 @@ func (CpuInfoFrequencyInstrument) MeasureAndReport(channel TelemetryChannel) {
 		}
 	}
 
-	channel.Put(NewTelemetry("freq", sum))
+	channel.Put(telem.NewTelemetry("freq", sum))
 }
 
 var cpuScalingFiles, _ = filepath.Glob("/sys/devices/system/cpu/cpu[0-9]*/cpufreq/scaling_cur_freq")
 
-func (c CpuScalingFrequencyInstrument) MeasureAndReport(channel TelemetryChannel) {
+func (c CpuScalingFrequencyInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
 	var sum int64
 
 	for _, match := range cpuScalingFiles {
-		value, err := ReadLineAndParseInt(match)
+		value, err := readLineAndParseInt(match)
 		check(err)
 		sum += value
 	}
 
-	channel.Put(NewTelemetry("freq", float64(sum)))
+	channel.Put(telem.NewTelemetry("freq", float64(sum)))
 }
 
-func (LoadInstrument) MeasureAndReport(channel TelemetryChannel) {
-	text, err := ReadFirstLine("/proc/loadavg")
+func (LoadInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
+	text, err := readFirstLine("/proc/loadavg")
 	check(err)
 
 	parts := strings.Split(text, " ")
@@ -110,11 +125,11 @@ func (LoadInstrument) MeasureAndReport(channel TelemetryChannel) {
 	//l15 := parts[2]
 
 	if val, err := strconv.ParseFloat(l1, 64); err == nil {
-		channel.Put(NewTelemetry("load1", val))
+		channel.Put(telem.NewTelemetry("load1", val))
 	}
 
 	if val, err := strconv.ParseFloat(l5, 64); err == nil {
-		channel.Put(NewTelemetry("load5", val))
+		channel.Put(telem.NewTelemetry("load5", val))
 	}
 
 	//if val, err := strconv.ParseFloat(l15, 64); err == nil {
@@ -123,7 +138,7 @@ func (LoadInstrument) MeasureAndReport(channel TelemetryChannel) {
 
 }
 
-func (instr NetworkDataRateInstrument) MeasureAndReport(channel TelemetryChannel) {
+func (instr NetworkDataRateInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
 	var wg sync.WaitGroup
 	wg.Add(len(instr.Devices))
 	defer wg.Wait()
@@ -132,20 +147,20 @@ func (instr NetworkDataRateInstrument) MeasureAndReport(channel TelemetryChannel
 		rxPath := "/sys/class/net/" + device + "/statistics/rx_bytes"
 		txPath := "/sys/class/net/" + device + "/statistics/tx_bytes"
 
-		rxThen, err := ReadLineAndParseInt(rxPath)
+		rxThen, err := readLineAndParseInt(rxPath)
 		check(err)
-		txThen, err := ReadLineAndParseInt(txPath)
+		txThen, err := readLineAndParseInt(txPath)
 		check(err)
 
 		time.Sleep(1 * time.Second)
 
-		rxNow, err := ReadLineAndParseInt(rxPath)
+		rxNow, err := readLineAndParseInt(rxPath)
 		check(err)
-		txNow, err := ReadLineAndParseInt(txPath)
+		txNow, err := readLineAndParseInt(txPath)
 		check(err)
 
-		channel.Put(NewTelemetry("tx"+TopicSeparator+device, float64((txNow-txThen)/1000)))
-		channel.Put(NewTelemetry("rx"+TopicSeparator+device, float64((rxNow-rxThen)/1000)))
+		channel.Put(telem.NewTelemetry("tx"+telem.TopicSeparator+device, float64((txNow-txThen)/1000)))
+		channel.Put(telem.NewTelemetry("rx"+telem.TopicSeparator+device, float64((rxNow-rxThen)/1000)))
 		wg.Done()
 	}
 
@@ -174,17 +189,17 @@ func (instr NetworkDataRateInstrument) MeasureAndReport(channel TelemetryChannel
 func readBlockDeviceStats(dev string) []int64 {
 	path := "/sys/block/" + dev + "/stat"
 
-	line, err := ReadFirstLine(path)
+	line, err := readFirstLine(path)
 	check(err)
 
-	values, err := ParseInt64Array(strings.Fields(line))
+	values, err := parseInt64Array(strings.Fields(line))
 	check(err)
 	return values
 }
 
 const sectorSize = 512
 
-func (instr DiskDataRateInstrument) MeasureAndReport(channel TelemetryChannel) {
+func (instr DiskDataRateInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
 	var wg sync.WaitGroup
 	wg.Add(len(instr.Devices))
 	defer wg.Wait()
@@ -199,8 +214,8 @@ func (instr DiskDataRateInstrument) MeasureAndReport(channel TelemetryChannel) {
 		rd := (statsNow[2] - statsThen[2]) * sectorSize
 		wr := (statsNow[6] - statsThen[6]) * sectorSize
 
-		channel.Put(NewTelemetry("rd"+TopicSeparator+device, float64(rd)/1000))
-		channel.Put(NewTelemetry("wr"+TopicSeparator+device, float64(wr)/1000))
+		channel.Put(telem.NewTelemetry("rd"+telem.TopicSeparator+device, float64(rd)/1000))
+		channel.Put(telem.NewTelemetry("wr"+telem.TopicSeparator+device, float64(wr)/1000))
 	}
 
 	for _, device := range instr.Devices {
@@ -250,4 +265,52 @@ func NewInstrumentFactory(arch string) InstrumentFactory {
 	}
 
 	return defaultInstrumentFactory{}
+}
+
+func parseInt64Array(arr []string) ([]int64, error) {
+	ints := make([]int64, len(arr))
+	var err error = nil
+
+	for i := 0; i < len(arr); i++ {
+		ints[i], err = strconv.ParseInt(arr[i], 10, 64)
+		if err != nil {
+			return ints, err
+		}
+	}
+
+	return ints, err
+}
+
+// readFirstLine reads and returns the first line from the given file.
+// propagates errors from os open and bufio.Scanner.
+func readFirstLine(path string) (string, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+
+	defer func() {
+		_ = file.Close()
+	}()
+
+	scanner := bufio.NewScanner(file)
+
+	scanner.Scan()
+	text := scanner.Text()
+
+	return text, scanner.Err()
+}
+
+func readLineAndParseInt(path string) (int64, error) {
+	line, err := readFirstLine(path)
+	if err != nil {
+		return -1, err
+	}
+	return strconv.ParseInt(line, 10, 64)
+}
+
+func check(err error) {
+	if err != nil {
+		panic(err)
+	}
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"git.dsg.tuwien.ac.at/mc2/go-telemetry/internal/env"
+	"git.dsg.tuwien.ac.at/mc2/go-telemetry/internal/redis"
 	"git.dsg.tuwien.ac.at/mc2/go-telemetry/internal/telem"
 	"git.dsg.tuwien.ac.at/mc2/go-telemetry/internal/telemd"
 	"log"
@@ -23,7 +24,7 @@ func main() {
 		log.Fatal("error creating telemetry daemon: ", err)
 	}
 
-	redis, err := telem.NewRedisClientFromUrl(cfg.Redis.URL)
+	redisClient, err := redis.NewClientFromUrl(cfg.Redis.URL)
 	if nerr, ok := err.(*net.OpError); ok {
 		// TODO: retry
 		log.Fatal("could not connect to redis: ", nerr)
@@ -31,8 +32,8 @@ func main() {
 	if err != nil {
 		log.Fatal("error creating redis client ", err)
 	}
-	commandServer := telemd.NewRedisCommandServer(daemon, redis)
-	telemetryReporter := telemd.NewRedisReporter(daemon, redis)
+	commandServer := telemd.NewRedisCommandServer(daemon, redisClient)
+	telemetryReporter := telemd.NewRedisReporter(daemon, redisClient)
 
 	// exit handler
 	go func() {

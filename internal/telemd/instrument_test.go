@@ -1,6 +1,9 @@
-package telem
+package telemd
 
-import "testing"
+import (
+	"git.dsg.tuwien.ac.at/mc2/go-telemetry/internal/telem"
+	"testing"
+)
 
 func TestReadBlockDeviceStats(t *testing.T) {
 	stats := readBlockDeviceStats("loop0")
@@ -17,7 +20,7 @@ func TestReadBlockDeviceStats(t *testing.T) {
 }
 
 func TestDiskDataRateInstrument_MeasureAndReport(t *testing.T) {
-	tc := NewTelemetryChannel()
+	tc := telem.NewTelemetryChannel()
 	instrument := DiskDataRateInstrument{[]string{"loop0"}}
 
 	go instrument.MeasureAndReport(tc)
