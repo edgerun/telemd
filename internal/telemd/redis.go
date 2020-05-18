@@ -2,7 +2,7 @@ package telemd
 
 import (
 	"fmt"
-	"git.dsg.tuwien.ac.at/mc2/go-telemetry/internal/telem"
+	"github.com/edgerun/go-telemd/internal/telem"
 	"github.com/go-redis/redis/v7"
 	"log"
 )

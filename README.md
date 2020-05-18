@@ -1,7 +1,7 @@
-go-telemetry
-============
+go-telemd
+=========
 
-A symmetry telemetry library written in go
+A daemon that reports fine-grained systems runtime data into Redis
 
 Build
 -----
@@ -34,9 +34,9 @@ Or it may report an aggregate value into
 
     telem/rpi0/cpu
 
-### Talking back to clients
+### Talking back to hosts
 
-Clients listen on the topic
+Telemd hosts listen on the topic
 
     telemcmd/<hostname>
 

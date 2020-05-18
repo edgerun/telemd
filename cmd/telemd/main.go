@@ -1,10 +1,10 @@
 package main
 
 import (
-	"git.dsg.tuwien.ac.at/mc2/go-telemetry/internal/env"
-	"git.dsg.tuwien.ac.at/mc2/go-telemetry/internal/redis"
-	"git.dsg.tuwien.ac.at/mc2/go-telemetry/internal/telem"
-	"git.dsg.tuwien.ac.at/mc2/go-telemetry/internal/telemd"
+	"github.com/edgerun/go-telemd/internal/env"
+	"github.com/edgerun/go-telemd/internal/redis"
+	"github.com/edgerun/go-telemd/internal/telem"
+	"github.com/edgerun/go-telemd/internal/telemd"
 	"log"
 	"net"
 	"os"

@@ -4,8 +4,8 @@
 #############
 FROM golang as builder
 
-ADD . /go/src/git.dsg.tuwien.ac.at/mc2/go-telemetry
-WORKDIR /go/src/git.dsg.tuwien.ac.at/mc2/go-telemetry
+ADD . /go/src/github.com/edgerun/go-telemd
+WORKDIR /go/src/github.com/edgerun/go-telemd
 RUN CGO_ENABLED=0 GOARCH=arm GOARM=7 go build -v -o /usr/local/bin/telemd cmd/telemd/main.go
 
 #############

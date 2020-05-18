@@ -1,7 +1,7 @@
 package telemd
 
 import (
-	"git.dsg.tuwien.ac.at/mc2/go-telemetry/internal/telem"
+	"github.com/edgerun/go-telemd/internal/telem"
 	"time"
 )
 

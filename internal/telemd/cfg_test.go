@@ -1,7 +1,7 @@
 package telemd
 
 import (
-	"git.dsg.tuwien.ac.at/mc2/go-telemetry/internal/env"
+	"github.com/edgerun/go-telemd/internal/env"
 	"testing"
 )
 

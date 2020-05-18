@@ -1,4 +1,4 @@
-module git.dsg.tuwien.ac.at/mc2/go-telemetry
+module github.com/edgerun/go-telemd
 
 go 1.14
 
