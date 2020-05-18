@@ -54,7 +54,7 @@ func NewDefaultConfig() *Config {
 
 func (cfg *Config) LoadFromEnvironment(env env.Environment) {
 
-	if name, ok := env.Lookup("telemd_node_name"); ok {
+	if name, ok := env.Lookup("telemd_nodename"); ok {
 		cfg.NodeName = name
 	}
 

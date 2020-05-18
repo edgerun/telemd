@@ -21,10 +21,10 @@ Usage
 
 telemd reports telemetry data into (Redis) topics.
 
-The topic schema is as follows. It starts with the keyword `telem`, followed by the hostname that reports the telemetry,
-the specific metric being reported, and optionally the subsystem (e.g., a specific network device or disk).
+The topic schema is as follows. It starts with the keyword `telem`, followed by the node name that reports the
+telemetry, the specific metric being reported, and optionally the subsystem (e.g., a specific network device or disk).
 
-    telem/<hostname>/<metric>[/<subsystem>]
+    telem/<nodename>/<metric>[/<subsystem>]
 
 For example, the CPU utilization of CPU core 0 host `rpi0` could be reported as:
 
@@ -51,7 +51,7 @@ The `telemd` command allows the following parameters via environment variables.
 
 | Variable | Default | Description |
 |---|---|---|
-| `telemd_node_name`    | `$HOST`       | The node name determines the value for `<hostname>` in the topics |
+| `telemd_nodename`     | `$HOST`       | The node name determines the value for `<nodename>` in the topics |
 | `telemd_redis_host`   | `localhost`   | The redis host to connect to |
 | `telemd_redis_port`   | `6379`        | The redis port to connect to |
 | `telemd_redis_url`    |               | Can be used to specify the redis URL (e.g., `redis://localhost:1234`). Overwrites anything set to `telemd_redis_host`.
