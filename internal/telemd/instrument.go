@@ -38,24 +38,6 @@ type DiskDataRateInstrument struct {
 	Devices []string
 }
 
-// readCpuUtil returns an array of the following values from /proc/stat
-// user, nice, system, idle, iowait, irq, softirq
-func readCpuUtil() []float64 {
-	line, err := readFirstLine("/proc/stat")
-	check(err)
-	line = strings.Trim(line, " ")
-	parts := strings.Split(line, " ")
-
-	var values []float64
-	for _, v := range parts[2:] { // first two parts are 'cpu' and a whitespace
-		val, err := strconv.ParseFloat(v, 64)
-		check(err)
-		values = append(values, val)
-	}
-
-	return values
-}
-
 func (CpuUtilInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
 	then := readCpuUtil()
 	time.Sleep(500 * time.Millisecond)
@@ -169,34 +151,6 @@ func (instr NetworkDataRateInstrument) MeasureAndReport(channel telem.TelemetryC
 	}
 }
 
-// Reads the statistics from https://www.kernel.org/doc/Documentation/block/stat.txt
-// and returns an array where the indices correspond to the following values:
-//  0   read I/Os       requests      number of read I/Os processed
-//  1   read merges     requests      number of read I/Os merged with in-queue I/O
-//  2   read sectors    sectors       number of sectors read
-//  3   read ticks      milliseconds  total wait time for read requests
-//  4   write I/Os      requests      number of write I/Os processed
-//  5   write merges    requests      number of write I/Os merged with in-queue I/O
-//  6   write sectors   sectors       number of sectors written
-//  7   write ticks     milliseconds  total wait time for write requests
-//  8   in_flight       requests      number of I/Os currently in flight
-//  9   io_ticks        milliseconds  total time this block device has been active
-// 10   time_in_queue   milliseconds  total wait time for all requests
-// 11   discard I/Os    requests      number of discard I/Os processed
-// 12   discard merges  requests      number of discard I/Os merged with in-queue I/O
-// 13   discard sectors sectors       number of sectors discarded
-// 14   discard ticks   milliseconds  total wait time for discard requests
-func readBlockDeviceStats(dev string) []int64 {
-	path := "/sys/block/" + dev + "/stat"
-
-	line, err := readFirstLine(path)
-	check(err)
-
-	values, err := parseInt64Array(strings.Fields(line))
-	check(err)
-	return values
-}
-
 const sectorSize = 512
 
 func (instr DiskDataRateInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
@@ -265,48 +219,6 @@ func NewInstrumentFactory(arch string) InstrumentFactory {
 	}
 
 	return defaultInstrumentFactory{}
-}
-
-func parseInt64Array(arr []string) ([]int64, error) {
-	ints := make([]int64, len(arr))
-	var err error = nil
-
-	for i := 0; i < len(arr); i++ {
-		ints[i], err = strconv.ParseInt(arr[i], 10, 64)
-		if err != nil {
-			return ints, err
-		}
-	}
-
-	return ints, err
-}
-
-// readFirstLine reads and returns the first line from the given file.
-// propagates errors from os open and bufio.Scanner.
-func readFirstLine(path string) (string, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return "", err
-	}
-
-	defer func() {
-		_ = file.Close()
-	}()
-
-	scanner := bufio.NewScanner(file)
-
-	scanner.Scan()
-	text := scanner.Text()
-
-	return text, scanner.Err()
-}
-
-func readLineAndParseInt(path string) (int64, error) {
-	line, err := readFirstLine(path)
-	if err != nil {
-		return -1, err
-	}
-	return strconv.ParseInt(line, 10, 64)
 }
 
 func check(err error) {
