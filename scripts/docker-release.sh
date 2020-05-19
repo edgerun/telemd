@@ -15,15 +15,18 @@ IMAGE=edgerun/go-telemd
 
 docker build -t ${IMAGE}:${VERSION}-amd64 -f build/package/telemd/Dockerfile.amd64 .
 docker build -t ${IMAGE}:${VERSION}-arm32v7 -f build/package/telemd/Dockerfile.arm32v7 .
+docker build -t ${IMAGE}:${VERSION}-arm32v7 -f build/package/telemd/Dockerfile.aarch64 .
 
 export DOCKER_CLI_EXPERIMENTAL=enabled
 
 docker push ${IMAGE}:${VERSION}-amd64 &
 docker push ${IMAGE}:${VERSION}-arm32v7 &
+docker push ${IMAGE}:${VERSION}-aarch64 &
 wait
 
 docker manifest create --amend ${IMAGE}:${VERSION} \
 	${IMAGE}:${VERSION}-amd64 \
-	${IMAGE}:${VERSION}-arm32v7
+	${IMAGE}:${VERSION}-arm32v7 \
+	${IMAGE}:${VERSION}-aarch64
 
 docker manifest push ${IMAGE}:${VERSION}
