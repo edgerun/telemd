@@ -6,4 +6,4 @@
 BASE="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 PROJECT_ROOT=$(realpath "${BASE}/../")
 
-docker build -t go-telemetry/telemd -f build/package/telemd/Dockerfile.amd64 .
+docker build -t edgerun/go-telemd -f build/package/telemd/Dockerfile.amd64 .
