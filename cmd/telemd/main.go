@@ -37,7 +37,6 @@ func main() {
 	if err != nil {
 		log.Fatal("error initializing node info", err)
 	}
-	defer commandServer.RemoveNodeInfo()
 
 	telemetryReporter := telemd.NewRedisReporter(daemon, redisClient)
 
@@ -48,14 +47,13 @@ func main() {
 		<-sigs
 		log.Println("stopping daemon")
 		commandServer.Stop()
+		commandServer.RemoveNodeInfo()
 		telemetryReporter.Stop()
 		daemon.Stop()
 	}()
 
 	go commandServer.Run()
 	go telemetryReporter.Run()
-
-	defer redisClient.Close()
 
 	log.Println("running daemon")
 	daemon.Run() // blocks until everything has shut down after daemon.Stop()
