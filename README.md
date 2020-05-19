@@ -34,16 +34,43 @@ Or it may report an aggregate value into
 
     telem/rpi0/cpu
 
+#### Instruments
+
+The default telemd runs the following instruments:
+
+* `cpu` The CPU utilization of the last 0.5 seconds in `%`
+* `freq` The sum of clock frequencies of the main CPUs
+* `disk` Disk I/O rate averaged in bytes/second
+* `net` Network I/O rate averaged in bytes/second
+* `load` the system load average of the last 1 and 5 minutes
+
+### Info keys
+
+When a telemetry daemon starts, it writes static information about its host into the Redis key 
+`telemd.info:<nodename>`.
+It is a Redis hash has the following keys:
+
+| Key | Type | Description |
+|---|---|---|
+| `arch`     | str    | the processor architecture (`arm32`, `amd64`, ...) |
+| `cpus`     | int    | number of processors |
+| `ram`      | int    | maximal available RAM in kilobytes |
+| `boot`     | int    | UNIX timestamp of when the node was last booted |
+| `disk`     | [str]  | The disk devices available for monitoring |
+| `net`      | [str]  | The network devices available for monitoring |
+| `hostname` | str    | The real hostname |
+
 ### Talking back to hosts
 
 Telemd hosts listen on the topic
 
-    telemcmd/<hostname>
+    telemcmd/<nodename>
 
 for commands. Currently, telemd supports the following commands:
 
 * `pause` pauses reporting of metrics
 * `unpause` unpauses report of metrics
+* `info` update the info keys
 
 ### Telemetry Daemon Parameters
 

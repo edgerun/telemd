@@ -1,8 +1,10 @@
 package telemd
 
 import (
+	"errors"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // Reads the statistics from https://www.kernel.org/doc/Documentation/block/stat.txt
@@ -49,4 +51,57 @@ func readCpuUtil() []float64 {
 	}
 
 	return values
+}
+
+func readMeminfo() map[string]string {
+	vals := make(map[string]string)
+
+	parser := func(line string) bool {
+		parts := strings.Split(line, ":")
+
+		if len(parts) != 2 {
+			return true
+		}
+
+		k, v := strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1])
+		vals[k] = v
+
+		return true
+	}
+
+	check(visitLines("/proc/meminfo", parser))
+
+	return vals
+}
+
+func readMemTotal() (int64, error) {
+	val, ok := readMeminfo()["MemTotal"]
+	if !ok {
+		return 0, errors.New("MemTotal not found")
+	}
+
+	kbstr := strings.Split(val, " ")[0]
+	return strconv.ParseInt(kbstr, 10, 64)
+}
+
+func readUptime() (float64, error) {
+	line, err := readFirstLine("/proc/uptime")
+	if err != nil {
+		return 0, err
+	}
+
+	parts := strings.Split(line, " ")
+	if len(parts) != 2 {
+		return 0, errors.New("Unexpected number of fields in /proc/uptime: " + line)
+	}
+
+	return strconv.ParseFloat(parts[0], 64)
+}
+
+func bootTime() (int64, error) {
+	uptime, err := readUptime()
+	if err != nil {
+		return 0, err
+	}
+	return time.Now().Unix() - int64(uptime), nil
 }

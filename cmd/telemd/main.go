@@ -33,6 +33,12 @@ func main() {
 		log.Fatal("error creating redis client ", err)
 	}
 	commandServer := telemd.NewRedisCommandServer(daemon, redisClient)
+	err = commandServer.UpdateNodeInfo()
+	if err != nil {
+		log.Fatal("error initializing node info", err)
+	}
+	defer commandServer.RemoveNodeInfo()
+
 	telemetryReporter := telemd.NewRedisReporter(daemon, redisClient)
 
 	// exit handler
@@ -48,6 +54,8 @@ func main() {
 
 	go commandServer.Run()
 	go telemetryReporter.Run()
+
+	defer redisClient.Close()
 
 	log.Println("running daemon")
 	daemon.Run() // blocks until everything has shut down after daemon.Stop()

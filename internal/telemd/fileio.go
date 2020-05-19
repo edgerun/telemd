@@ -6,6 +6,27 @@ import (
 	"strconv"
 )
 
+// visitLines processes the given file line by line and applies a visitor
+// function to each line. If the visitor returns false, then the method returns
+// and the file is closed.
+func visitLines(path string, visitor func(string) bool) error {
+	file, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		cont := visitor(scanner.Text())
+		if !cont {
+			break
+		}
+	}
+
+	return scanner.Err()
+}
+
 func parseInt64Array(arr []string) ([]int64, error) {
 	ints := make([]int64, len(arr))
 	var err error = nil

@@ -5,6 +5,7 @@ import (
 	"github.com/edgerun/go-telemd/internal/telem"
 	"github.com/go-redis/redis/v7"
 	"log"
+	"strings"
 )
 
 type RedisCommandServer struct {
@@ -45,6 +46,11 @@ func (server *RedisCommandServer) Run() {
 				server.daemon.Send(Pause)
 			case "unpause":
 				server.daemon.Send(Unpause)
+			case "info":
+				err := server.UpdateNodeInfo()
+				if err != nil {
+					log.Println("error while updating node info", err)
+				}
 			default:
 				log.Println("unhandled command", payload)
 			}
@@ -58,8 +64,37 @@ func (server *RedisCommandServer) Run() {
 	}
 }
 
+func (server *RedisCommandServer) UpdateNodeInfo() error {
+	return WriteNodeInfo(server.client, server.daemon.cfg.NodeName, SysInfo())
+}
+
+func (server *RedisCommandServer) RemoveNodeInfo() error {
+	return RemoveNodeInfo(server.client, server.daemon.cfg.NodeName)
+}
+
 func (server *RedisCommandServer) Stop() {
 	server.stopped <- true
+}
+
+func WriteNodeInfo(client *redis.Client, nodeName string, info NodeInfo) error {
+	key := "telemd.info:" + nodeName
+
+	multi := client.TxPipeline()
+
+	multi.HSet(key, "arch", info.Arch)
+	multi.HSet(key, "boot", info.Boot)
+	multi.HSet(key, "hostname", info.Hostname)
+	multi.HSet(key, "ram", info.Ram)
+	multi.HSet(key, "cpus", info.Cpus)
+	multi.HSet(key, "disk", strings.Join(info.Disk, " "))
+	multi.HSet(key, "net", strings.Join(info.Net, " "))
+
+	_, err := multi.Exec()
+	return err
+}
+
+func RemoveNodeInfo(client *redis.Client, nodeName string) error {
+	return client.Del("telemd.info:" + nodeName).Err()
 }
 
 type RedisReporter struct {
