@@ -6,8 +6,15 @@ import (
 )
 
 type Environment interface {
+	// Lookup retrieves the value of the environment variable named by the key. If the variable is present in the
+	// environment the value (which may be empty) is returned and the boolean is true. Otherwise the returned value will
+	// be empty and the boolean will be false
 	Lookup(key string) (string, bool)
+
+	// Get retrieves the value of the environment variable named by the key. It returns the value, which will be empty
+	// if the variable is not present. To distinguish between an empty value and an unset value, use Lookup.
 	Get(key string) string
+
 	Set(key string, value string)
 
 	LookupInt(key string) (int64, bool, error)
