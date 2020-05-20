@@ -12,12 +12,35 @@ import (
 	"syscall"
 )
 
-func main() {
+func loadConfig() *telemd.Config {
 	cfg := telemd.NewDefaultConfig()
-	cfg.LoadFromEnvironment(env.OsEnv)
+	cfg.LoadFromEnvironment(env.OsEnv) // load os env first to get potential telemd_nodename
+
+	if _, err := os.Stat(telemd.DefaultConfigPath); err == nil {
+		log.Println("reading config from", telemd.DefaultConfigPath)
+
+		iniEnv, err := env.NewIniEnvironment(telemd.DefaultConfigPath)
+		if err == nil {
+			cfg.LoadFromEnvironment(iniEnv)
+		}
+
+		iniNodeEnv, err := env.NewIniSectionEnvironment(telemd.DefaultConfigPath, cfg.NodeName)
+		if err == nil {
+			cfg.LoadFromEnvironment(iniNodeEnv)
+		}
+
+		cfg.LoadFromEnvironment(env.OsEnv) // overwrite ini values with os env as per specified behavior
+	}
+
+	return cfg
+}
+
+func main() {
+	cfg := loadConfig()
 
 	telem.NodeName = cfg.NodeName
-	log.Println("starting telemd for node", telem.NodeName)
+	hostname, _ := os.Hostname()
+	log.Printf("starting telemd for node %s (hostname: %s)\n", telem.NodeName, hostname)
 
 	daemon, err := telemd.NewDaemon(cfg)
 	if err != nil {

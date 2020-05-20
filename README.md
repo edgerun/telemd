@@ -74,6 +74,8 @@ for commands. Currently, telemd supports the following commands:
 
 ### Telemetry Daemon Parameters
 
+#### Environment variables
+
 The `telemd` command allows the following parameters via environment variables.
 
 | Variable | Default | Description |
@@ -84,3 +86,25 @@ The `telemd` command allows the following parameters via environment variables.
 | `telemd_redis_url`    |               | Can be used to specify the redis URL (e.g., `redis://localhost:1234`). Overwrites anything set to `telemd_redis_host`.
 | `telemd_net_devices`  | all           | A list of network devices to be monitored, e.g. `wlan0 eth0`. Monitors all devices per default |
 | `telemd_disk_devices` | all           | A list of block devices to be monitored, e.g. `sda sdc sdd0`. Monitors all devices per default |
+
+#### Configuration
+
+To allow the global configuration of a fleet of `telemd` instances, telemd can also be configured via ini files.
+A global configuration could look like this, where each section refers to a specific `telemd_nodename`.
+The `telemd` instance will look up its config in the section corresponding to its hostname.
+Values outside a section will be applied first.
+Environment variables will overwrite ini values.
+By default, we look up the config in `/etc/telemd/config.ini`
+
+```ini
+telemd_redis_host=192.168.0.10
+
+[myhost1]
+telemd_net_devices=eth0 wlan0
+telemd_disk_devices=sda
+
+[myhost2]
+telemd_net_devices=enp5s0
+telemd_disk_devices=sdb
+# ...
+```

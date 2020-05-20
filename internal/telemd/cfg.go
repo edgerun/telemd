@@ -9,6 +9,8 @@ import (
 	"time"
 )
 
+const DefaultConfigPath string = "/etc/telemd/config.ini"
+
 type Config struct {
 	NodeName string
 	Redis    struct {
