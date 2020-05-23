@@ -1,33 +1,42 @@
 #!/usr/bin/env bash
 
-BASE="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-PROJECT_ROOT=$(realpath "${BASE}/../")
+image=edgerun/go-telemd
 
 if [[ $1 ]]; then
-	VERSION="$1"
+	version="$1"
 else
-  VERSION="latest"
+	version="latest"
 fi
 
+basetag="${image}:${version}"
+
+# change into project root
+BASE="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+PROJECT_ROOT=$(realpath "${BASE}/../")
 cd $PROJECT_ROOT
 
-IMAGE=edgerun/go-telemd
+# build all the images
+docker build -t ${basetag}-amd64 -f build/package/telemd/Dockerfile.amd64 .
+docker build -t ${basetag}-arm32v7 -f build/package/telemd/Dockerfile.arm32v7 .
+docker build -t ${basetag}-aarch64 -f build/package/telemd/Dockerfile.aarch64 .
 
-docker build -t ${IMAGE}:${VERSION}-amd64 -f build/package/telemd/Dockerfile.amd64 .
-docker build -t ${IMAGE}:${VERSION}-arm32v7 -f build/package/telemd/Dockerfile.arm32v7 .
-docker build -t ${IMAGE}:${VERSION}-aarch64 -f build/package/telemd/Dockerfile.aarch64 .
-
-export DOCKER_CLI_EXPERIMENTAL=enabled
-
-docker push ${IMAGE}:${VERSION}-amd64 &
-docker push ${IMAGE}:${VERSION}-arm32v7 &
-docker push ${IMAGE}:${VERSION}-aarch64 &
+# # push em all
+docker push ${basetag}-amd64 &
+docker push ${basetag}-arm32v7 &
+docker push ${basetag}-aarch64 &
 
 wait
 
-docker manifest create --amend ${IMAGE}:${VERSION} \
-	${IMAGE}:${VERSION}-amd64 \
-	${IMAGE}:${VERSION}-arm32v7 \
-	${IMAGE}:${VERSION}-aarch64
+export DOCKER_CLI_EXPERIMENTAL=enabled
 
-docker manifest push ${IMAGE}:${VERSION}
+# create the manifest
+docker manifest create ${basetag} \
+	${basetag}-amd64 \
+	${basetag}-arm32v7 \
+	${basetag}-aarch64
+
+# explicit annotations
+docker manifest annotate ${basetag} ${basetag}-arm32v7 --os "linux" --arch "arm" --variant "v7" 
+
+# ship it
+docker manifest push --purge ${basetag}
