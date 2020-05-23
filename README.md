@@ -40,6 +40,7 @@ The default telemd runs the following instruments:
 
 * `cpu` The CPU utilization of the last 0.5 seconds in `%`
 * `freq` The sum of clock frequencies of the main CPUs
+* `ram` RAM currently used in kilobytes
 * `disk` Disk I/O rate averaged in bytes/second
 * `net` Network I/O rate averaged in bytes/second
 * `load` the system load average of the last 1 and 5 minutes

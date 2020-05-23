@@ -2,6 +2,7 @@ package telemd
 
 import (
 	"github.com/edgerun/go-telemd/internal/telem"
+	"log"
 	"testing"
 )
 
@@ -37,4 +38,17 @@ func TestDiskDataRateInstrument_MeasureAndReport(t *testing.T) {
 	}
 
 	tc.Close()
+}
+
+func TestRamInstrument_MeasureAndReport(t *testing.T) {
+	var instrument RamInstrument
+	tc := telem.NewTelemetryChannel()
+
+	go instrument.MeasureAndReport(tc)
+
+	t1 := <-tc.Channel()
+	if t1.Value <= 0 {
+		t.Error("Expected some RAM to be used")
+	}
+	log.Printf("%.4f\n", t1.Value)
 }

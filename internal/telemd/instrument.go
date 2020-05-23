@@ -22,6 +22,7 @@ type InstrumentFactory interface {
 	NewCpuFrequencyInstrument() Instrument
 	NewCpuUtilInstrument() Instrument
 	NewLoadInstrument() Instrument
+	NewRamInstrument() Instrument
 	NewNetworkDataRateInstrument([]string) Instrument
 	NewDiskDataRateInstrument([]string) Instrument
 }
@@ -177,6 +178,30 @@ func (instr DiskDataRateInstrument) MeasureAndReport(channel telem.TelemetryChan
 	}
 }
 
+func (instr RamInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
+	meminfo := readMeminfo()
+
+	totalString, ok := meminfo["MemTotal"]
+	if !ok {
+		return
+	}
+	total, err := parseMeminfoString(totalString)
+	if err != nil {
+		log.Println("Error parsing MemTotal string", totalString, err)
+	}
+
+	freeString, ok := meminfo["MemAvailable"]
+	if !ok {
+		return
+	}
+	free, err := parseMeminfoString(freeString)
+	if err != nil {
+		log.Println("Error parsing MemFree string", freeString, err)
+	}
+
+	channel.Put(telem.NewTelemetry("ram", float64(total-free)))
+}
+
 type defaultInstrumentFactory struct{}
 
 func (d defaultInstrumentFactory) NewCpuFrequencyInstrument() Instrument {
@@ -189,6 +214,10 @@ func (d defaultInstrumentFactory) NewCpuUtilInstrument() Instrument {
 
 func (d defaultInstrumentFactory) NewLoadInstrument() Instrument {
 	return LoadInstrument{}
+}
+
+func (d defaultInstrumentFactory) NewRamInstrument() Instrument {
+	return RamInstrument{}
 }
 
 func (d defaultInstrumentFactory) NewNetworkDataRateInstrument(devices []string) Instrument {

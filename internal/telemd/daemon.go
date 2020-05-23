@@ -38,6 +38,7 @@ func (daemon *Daemon) initInstruments(factory InstrumentFactory) {
 		"cpu":  factory.NewCpuUtilInstrument(),
 		"freq": factory.NewCpuFrequencyInstrument(),
 		"load": factory.NewLoadInstrument(),
+		"ram":  factory.NewRamInstrument(),
 		"net":  factory.NewNetworkDataRateInstrument(cfg.Instruments.Net.Devices),
 		"disk": factory.NewDiskDataRateInstrument(cfg.Instruments.Disk.Devices),
 	}
@@ -45,7 +46,12 @@ func (daemon *Daemon) initInstruments(factory InstrumentFactory) {
 
 func (daemon *Daemon) initTickers() {
 	for k, instrument := range daemon.instruments {
-		ticker := NewTelemetryTicker(instrument, daemon.telemetry, daemon.cfg.Agent.Periods[k])
+		period, ok := daemon.cfg.Agent.Periods[k]
+		if !ok {
+			log.Println("warning: no period assigned for instrument", k, "using 1")
+			period = 1 * time.Second
+		}
+		ticker := NewTelemetryTicker(instrument, daemon.telemetry, period)
 		daemon.tickers[k] = ticker
 	}
 }

@@ -79,9 +79,15 @@ func readMemTotal() (int64, error) {
 	if !ok {
 		return 0, errors.New("MemTotal not found")
 	}
+	return parseMeminfoString(val)
+}
 
-	kbstr := strings.Split(val, " ")[0]
-	return strconv.ParseInt(kbstr, 10, 64)
+// Parses the given size string from /proc/meminfo and returns the value in kB.
+func parseMeminfoString(sizeString string) (int64, error) {
+	// we're assuming that /proc/meminfo always returns kb
+	kbstr := strings.Split(sizeString, " ")
+	value := kbstr[0]
+	return strconv.ParseInt(value, 10, 64)
 }
 
 func readUptime() (float64, error) {
