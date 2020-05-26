@@ -6,7 +6,6 @@ import (
 	"github.com/edgerun/telemd/internal/telem"
 	"github.com/edgerun/telemd/internal/telemd"
 	"log"
-	"net"
 	"os"
 	"os/signal"
 	"syscall"
@@ -42,41 +41,54 @@ func main() {
 	hostname, _ := os.Hostname()
 	log.Printf("starting telemd for node %s (hostname: %s)\n", telem.NodeName, hostname)
 
-	daemon, err := telemd.NewDaemon(cfg)
+	reconnectingClient, err := redis.NewReconnectingClientFromUrl(cfg.Redis.URL, cfg.Redis.RetryBackoff)
 	if err != nil {
-		log.Fatal("error creating telemetry daemon: ", err)
+		log.Fatal("could not create redis client: ", err)
 	}
+	daemon := telemd.NewDaemon(cfg)
+	commandServer := telemd.NewRedisCommandServer(daemon, reconnectingClient.Client)
+	telemetryReporter := telemd.NewRedisReporter(daemon, reconnectingClient.Client)
 
-	redisClient, err := redis.NewClientFromUrl(cfg.Redis.URL)
-	if nerr, ok := err.(*net.OpError); ok {
-		// TODO: retry
-		log.Fatal("could not connect to redis: ", nerr)
-	}
-	if err != nil {
-		log.Fatal("error creating redis client ", err)
-	}
-	commandServer := telemd.NewRedisCommandServer(daemon, redisClient)
-	err = commandServer.UpdateNodeInfo()
-	if err != nil {
-		log.Fatal("error initializing node info", err)
-	}
+	go func() {
+		for {
+			state := <-reconnectingClient.ConnectionState
+			switch state {
+			case redis.Connected:
+				go commandServer.Run()
+				go telemetryReporter.Run()
+				err := commandServer.UpdateNodeInfo()
+				if err != nil {
+					log.Fatal("error initializing node info", err)
+				}
+			case redis.Failed:
+				daemon.PauseTickers()
+				commandServer.Stop()
+				go telemetryReporter.Stop()
+				go reconnectingClient.Client.Ping()
+			case redis.Recovered:
+				daemon.UnpauseTickers()
+				go commandServer.Run()
+				go telemetryReporter.Run()
+			default:
+				return
+			}
+		}
+	}()
 
-	telemetryReporter := telemd.NewRedisReporter(daemon, redisClient)
-
-	// exit handler
 	go func() {
 		sigs := make(chan os.Signal, 1)
 		signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 		<-sigs
 		log.Println("stopping daemon")
 		commandServer.Stop()
-		commandServer.RemoveNodeInfo()
+		_ = commandServer.RemoveNodeInfo()
 		telemetryReporter.Stop()
 		daemon.Stop()
+		close(reconnectingClient.ConnectionState)
 	}()
 
-	go commandServer.Run()
-	go telemetryReporter.Run()
+	// initiate redis connection by sending a PING
+	go reconnectingClient.Client.Ping()
 
 	log.Println("running daemon")
 	daemon.Run() // blocks until everything has shut down after daemon.Stop()

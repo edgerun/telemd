@@ -1,6 +1,8 @@
 package telemd
 
-import "log"
+import (
+	"log"
+)
 
 const (
 	Pause   Command = "pause"
@@ -39,22 +41,26 @@ func (daemon *Daemon) handleCommand(cmd Command) {
 	switch cmd {
 	case Pause:
 		log.Printf("pausing %d tickers\n", len(daemon.tickers))
-		daemon.pauseTickers()
+		daemon.isPausedByCommand = true
+		daemon.PauseTickers()
 	case Unpause:
 		log.Printf("unpausing %d tickers\n", len(daemon.tickers))
-		daemon.unpauseTickers()
+		daemon.isPausedByCommand = false
+		daemon.UnpauseTickers()
 	default:
 		log.Println("unhandled command", cmd)
 	}
 }
 
-func (daemon *Daemon) unpauseTickers() {
-	for _, ticker := range daemon.tickers {
-		ticker.Unpause()
+func (daemon *Daemon) UnpauseTickers() {
+	if !daemon.isPausedByCommand {
+		for _, ticker := range daemon.tickers {
+			ticker.Unpause()
+		}
 	}
 }
 
-func (daemon *Daemon) pauseTickers() {
+func (daemon *Daemon) PauseTickers() {
 	for _, ticker := range daemon.tickers {
 		ticker.Pause()
 	}

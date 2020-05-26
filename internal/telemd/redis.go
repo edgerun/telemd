@@ -25,7 +25,6 @@ func NewRedisCommandServer(daemon *Daemon, client *redis.Client) *RedisCommandSe
 func (server *RedisCommandServer) Run() {
 	topic := "telemcmd" + telem.TopicSeparator + telem.NodeName
 
-	// TODO: retry loop if pubsub breaks
 	pubsub := server.client.Subscribe(topic)
 	channel := pubsub.Channel()
 

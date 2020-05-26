@@ -9,15 +9,16 @@ import (
 )
 
 type Daemon struct {
-	cfg         *Config
-	cmds        *commandChannel
-	telemetry   telem.TelemetryChannel
-	instruments map[string]Instrument
+	cfg               *Config
+	cmds              *commandChannel
+	isPausedByCommand bool
+	telemetry         telem.TelemetryChannel
+	instruments       map[string]Instrument
 
 	tickers map[string]TelemetryTicker
 }
 
-func NewDaemon(cfg *Config) (*Daemon, error) {
+func NewDaemon(cfg *Config) *Daemon {
 	td := &Daemon{
 		cfg:       cfg,
 		telemetry: telem.NewTelemetryChannel(),
@@ -28,7 +29,7 @@ func NewDaemon(cfg *Config) (*Daemon, error) {
 	td.initInstruments(NewInstrumentFactory(runtime.GOARCH))
 	td.initTickers()
 
-	return td, nil
+	return td
 }
 
 func (daemon *Daemon) initInstruments(factory InstrumentFactory) {
