@@ -1,19 +1,37 @@
 package redis
 
-import goredis "github.com/go-redis/redis/v7"
+import (
+	goredis "github.com/go-redis/redis/v7"
+	"math"
+	"time"
+)
 
-func NewClient(options *goredis.Options) (*goredis.Client, error) {
-	client := goredis.NewClient(options)
-	options.MaxRetries = 100
-	_, err := client.Ping().Result()
-	return client, err
+type ConnectionState uint8
+
+const (
+	Connected ConnectionState = 1 // first connection
+	Failed    ConnectionState = 2 // re-connect failed
+	Recovered ConnectionState = 3 // successfully re-connected after failure
+)
+
+type ReconnectingClient struct {
+	Client          *goredis.Client
+	ConnectionState chan ConnectionState
 }
 
-func NewClientFromUrl(url string) (*goredis.Client, error) {
+func NewReconnectingClient(options *goredis.Options, retryBackoff time.Duration) *ReconnectingClient {
+	connectionState := make(chan ConnectionState)
+	client := goredis.NewClient(options)
+	options.MaxRetries = math.MaxInt32
+	options.Limiter = newLimiter(retryBackoff, connectionState)
+	return &ReconnectingClient{client, connectionState}
+}
+
+func NewReconnectingClientFromUrl(url string, retryBackoff time.Duration) (*ReconnectingClient, error) {
 	options, err := goredis.ParseURL(url)
 
 	if err != nil {
 		return nil, err
 	}
-	return NewClient(options)
+	return NewReconnectingClient(options, retryBackoff), nil
 }

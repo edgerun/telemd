@@ -14,7 +14,8 @@ const DefaultConfigPath string = "/etc/telemd/config.ini"
 type Config struct {
 	NodeName string
 	Redis    struct {
-		URL string
+		URL          string
+		RetryBackoff time.Duration
 	}
 	Agent struct {
 		Periods map[string]time.Duration
@@ -39,6 +40,7 @@ func NewDefaultConfig() *Config {
 	cfg.NodeName, _ = os.Hostname()
 
 	cfg.Redis.URL = "redis://localhost"
+	cfg.Redis.RetryBackoff = 5 * time.Second
 
 	cfg.Instruments.Net.Devices = networkDevices()
 	cfg.Instruments.Disk.Devices = blockDevices()
@@ -46,7 +48,7 @@ func NewDefaultConfig() *Config {
 	cfg.Agent.Periods = map[string]time.Duration{
 		"cpu":  500 * time.Millisecond,
 		"freq": 500 * time.Millisecond,
-		"ram": 1 * time.Second,
+		"ram":  1 * time.Second,
 		"load": 5 * time.Second,
 		"net":  500 * time.Millisecond,
 		"disk": 500 * time.Millisecond,
@@ -68,6 +70,12 @@ func (cfg *Config) LoadFromEnvironment(env env.Environment) {
 			cfg.Redis.URL = "redis://" + host + ":" + port
 		} else {
 			cfg.Redis.URL = "redis://" + host
+		}
+	}
+	if backoffString, ok := env.Lookup("telemd_redis_Retry_backoff"); ok {
+		backoffDuration, err := time.ParseDuration(backoffString)
+		if err != nil {
+			cfg.Redis.RetryBackoff = backoffDuration
 		}
 	}
 
