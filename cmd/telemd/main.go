@@ -1,10 +1,10 @@
 package main
 
 import (
-	"github.com/edgerun/go-telemd/internal/env"
-	"github.com/edgerun/go-telemd/internal/redis"
-	"github.com/edgerun/go-telemd/internal/telem"
-	"github.com/edgerun/go-telemd/internal/telemd"
+	"github.com/edgerun/telemd/internal/env"
+	"github.com/edgerun/telemd/internal/redis"
+	"github.com/edgerun/telemd/internal/telem"
+	"github.com/edgerun/telemd/internal/telemd"
 	"log"
 	"net"
 	"os"

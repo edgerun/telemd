@@ -2,7 +2,7 @@ package telemd
 
 import (
 	"bufio"
-	"github.com/edgerun/go-telemd/internal/telem"
+	"github.com/edgerun/telemd/internal/telem"
 	"log"
 	"os"
 	"path/filepath"

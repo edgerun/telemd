@@ -2,7 +2,7 @@ package telemd
 
 import (
 	"fmt"
-	"github.com/edgerun/go-telemd/internal/telem"
+	"github.com/edgerun/telemd/internal/telem"
 	"github.com/go-redis/redis/v7"
 	"log"
 	"strings"

@@ -1,7 +1,7 @@
 package telemd
 
 import (
-	"github.com/edgerun/go-telemd/internal/telem"
+	"github.com/edgerun/telemd/internal/telem"
 	"log"
 	"runtime"
 	"sync"

@@ -1,7 +1,7 @@
 package telemd
 
 import (
-	"github.com/edgerun/go-telemd/internal/env"
+	"github.com/edgerun/telemd/internal/env"
 	"io/ioutil"
 	"log"
 	"os"

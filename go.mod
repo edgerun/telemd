@@ -1,4 +1,4 @@
-module github.com/edgerun/go-telemd
+module github.com/edgerun/telemd
 
 go 1.14
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-image=edgerun/go-telemd
+image=edgerun/telemd
 
 if [[ $1 ]]; then
 	version="$1"

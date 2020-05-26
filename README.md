@@ -1,5 +1,5 @@
-go-telemd
-=========
+telemd
+======
 
 A daemon that reports fine-grained systems runtime data into Redis
 
