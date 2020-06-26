@@ -40,6 +40,7 @@ type InstrumentFactory interface {
 	NewWifiTxBitrateInstrument(string) Instrument
 	NewWifiRxBitrateInstrument(string) Instrument
 	NewWifiSignalInstrument(string) Instrument
+	NewGpuFrequencyInstrument([]int) Instrument
 }
 
 type CpuInfoFrequencyInstrument struct{}
@@ -88,6 +89,17 @@ type KuberenetesCgroupMemoryInstrument struct{}
 type KubernetesCgroupv1NetworkInstrument struct {
 	pids      map[string]string
 	procMount string
+}
+
+type DefaultGpuFrequencyInstrument struct {
+}
+
+type Arm64GpuFrequencyInstrument struct {
+	Devices []int
+}
+
+type X86GpuFrequencyInstrument struct {
+	Devices []int
 }
 
 func (CpuUtilInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
@@ -284,6 +296,18 @@ func (instr RamInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
 	}
 
 	channel.Put(telem.NewTelemetry("ram", float64(total-free)))
+}
+
+func (instr Arm64GpuFrequencyInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
+
+}
+
+func (instr X86GpuFrequencyInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
+
+}
+
+func (instr DefaultGpuFrequencyInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
+	// per default no gpu support
 }
 
 func (PsiCpuInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
@@ -1031,12 +1055,28 @@ func (d defaultInstrumentFactory) NewDockerCgroupMemoryInstrument() Instrument {
 	}
 }
 
-type armInstrumentFactory struct {
+func (d defaultInstrumentFactory) NewGpuFrequencyInstrument(devices []int) Instrument {
+	return DefaultGpuFrequencyInstrument{}
+}
+
+type arm32InstrumentFactory struct {
 	defaultInstrumentFactory
+}
+
+type arm64InstrumentFactory struct {
+	defaultInstrumentFactory
+}
+
+func (a arm64InstrumentFactory) NewGpuFrequencyInstrument(devices []int) Instrument {
+	return Arm64GpuFrequencyInstrument{devices}
 }
 
 type x86InstrumentFactory struct {
 	defaultInstrumentFactory
+}
+
+func (x x86InstrumentFactory) NewGpuFrequencyInstrument(devices []int) Instrument {
+	return X86GpuFrequencyInstrument{devices}
 }
 
 func NewInstrumentFactory(arch string) InstrumentFactory {
@@ -1044,8 +1084,9 @@ func NewInstrumentFactory(arch string) InstrumentFactory {
 	case "amd64":
 		return x86InstrumentFactory{}
 	case "arm":
+		return arm32InstrumentFactory{}
 	case "arm64":
-		return armInstrumentFactory{}
+		return arm64InstrumentFactory{}
 	default:
 		log.Printf("Unknown arch %s, returning default factory", arch)
 	}

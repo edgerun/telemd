@@ -54,6 +54,8 @@ func (daemon *Daemon) initInstruments(factory InstrumentFactory) {
 		"kubernetes_cgrp_blkio":  factory.NewKubernetesCgroupBlkioInstrument(),
 		"kubernetes_cgrp_memory": factory.NewKubernetesCgroupMemoryInstrument(),
 		"kubernetes_cgrp_net":    factory.NewKubernetesCgroupNetInstrument(cfg.Mounts.Proc),
+		"gpu_freq": factory.NewGpuFrequencyInstrument(cfg.Instruments.Gpu.Devices),
+		"gpu_util": factory.NewGpuUtilInstrument(cfg.Instruments.Gpu.Devices),
 	}
 
 	activeNetDevice, err := findActiveNetDevice()

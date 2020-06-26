@@ -4,6 +4,7 @@ import (
 	"github.com/edgerun/telemd/internal/telem"
 	"log"
 	"testing"
+	"time"
 )
 
 // TODO: proper tests and use timeouts for channel reads
@@ -53,6 +54,24 @@ func TestRamInstrument_MeasureAndReport(t *testing.T) {
 		t.Error("Expected some RAM to be used")
 	}
 	log.Printf("%.4f\n", t1.Value)
+}
+
+func TestX86GpuFrequencyInstrument_MeasureAndReport(t *testing.T) {
+	instrument := X86GpuFrequencyInstrument{[]int{0}}
+	tc := telem.NewTelemetryChannel()
+
+	go instrument.MeasureAndReport(tc)
+
+	select {
+	case <-time.After(1 * time.Second):
+		t.Error("Timeout waiting for GPU frequency")
+	case t1 := <-tc.Channel():
+		if t1.Value < 0 {
+			t.Error("Unexpected negative GPU frequency")
+		}
+		log.Printf("%.4f\n", t1.Value)
+	}
+
 }
 
 func TestLoadInstrument_MeasureAndReport(t *testing.T) {

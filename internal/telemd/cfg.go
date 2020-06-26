@@ -30,6 +30,9 @@ type Config struct {
 		Disk struct {
 			Devices []string
 		}
+		Gpu struct {
+			Devices []int
+		}
 	}
 	Mounts struct {
 		Proc string
@@ -81,6 +84,8 @@ func NewDefaultConfig() *Config {
 		"kubernetes_cgrp_blkio":  1 * time.Second,
 		"kubernetes_cgrp_memory": 1 * time.Second,
 		"kubernetes_cgrp_net":    1 * time.Second,
+		"gpu_freq": 1 * time.Second,
+		"gpu_util": 1 * time.Second,
 	}
 
 	return cfg
@@ -125,6 +130,11 @@ func (cfg *Config) LoadFromEnvironment(env env.Environment) {
 	} else if err != nil {
 		log.Fatal("Error reading telemd_disk_devices", err)
 	}
+	//if devices, ok, err := env.LookupFields("telem_gpu_devices"); err == nil && ok {
+	//	//cfg.Instruments.Gpu.Devices = devices
+	//} else if err != nil {
+	//	log.Fatal("Error reading telem_gpu_devices", err)
+	//}
 
 	for instrument := range cfg.Instruments.Periods {
 		key := "telemd_period_" + instrument
