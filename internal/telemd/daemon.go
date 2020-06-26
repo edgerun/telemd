@@ -35,14 +35,15 @@ func NewDaemon(cfg *Config) *Daemon {
 func (daemon *Daemon) initInstruments(factory InstrumentFactory) {
 	cfg := daemon.cfg
 
-	instruments := map[string]Instrument{
-		"cpu":        factory.NewCpuUtilInstrument(),
-		"freq":       factory.NewCpuFrequencyInstrument(),
-		"load":       factory.NewLoadInstrument(),
-		"procs":      factory.NewProcsInstrument(),
-		"ram":        factory.NewRamInstrument(),
-		"net":        factory.NewNetworkDataRateInstrument(cfg.Instruments.Net.Devices),
-		"disk":       factory.NewDiskDataRateInstrument(cfg.Instruments.Disk.Devices),
+	daemon.instruments = map[string]Instrument{
+		"cpu":  factory.NewCpuUtilInstrument(),
+		"freq": factory.NewCpuFrequencyInstrument(),
+		"load": factory.NewLoadInstrument(),
+		"ram":  factory.NewRamInstrument(),
+		"net":  factory.NewNetworkDataRateInstrument(cfg.Instruments.Net.Devices),
+		"disk": factory.NewDiskDataRateInstrument(cfg.Instruments.Disk.Devices),
+		"gpu_freq": factory.NewGpuFrequencyInstrument(cfg.Instruments.Gpu.Devices),
+		"gpu_util": factory.NewGpuUtilInstrument(cfg.Instruments.Gpu.Devices),
 		"cgrp_cpu":   factory.NewCgroupCpuInstrument(),
 		"cgrp_blkio": factory.NewCgroupBlkioInstrument(),
 		"cgrp_net":   factory.NewCgroupNetworkInstrument(),

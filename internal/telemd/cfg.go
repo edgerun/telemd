@@ -30,6 +30,9 @@ type Config struct {
 		Disk struct {
 			Devices []string
 		}
+		Gpu struct {
+			Devices []int
+		}
 	}
 }
 
@@ -49,13 +52,14 @@ func NewDefaultConfig() *Config {
 	cfg.Instruments.Disk.Devices = blockDevices()
 
 	cfg.Instruments.Periods = map[string]time.Duration{
-		"cpu":        500 * time.Millisecond,
-		"freq":       500 * time.Millisecond,
-		"procs":      500 * time.Millisecond,
-		"ram":        1 * time.Second,
-		"load":       5 * time.Second,
-		"net":        500 * time.Millisecond,
-		"disk":       500 * time.Millisecond,
+		"cpu":  500 * time.Millisecond,
+		"freq": 500 * time.Millisecond,
+		"ram":  1 * time.Second,
+		"load": 5 * time.Second,
+		"net":  500 * time.Millisecond,
+		"disk": 500 * time.Millisecond,
+		"gpu_freq": 1 * time.Second,
+		"gpu_util": 1 * time.Second,
 		"cgrp_cpu":   1 * time.Second,
 		"cgrp_blkio": 1 * time.Second,
 		"cgrp_net":   1 * time.Second,
@@ -96,6 +100,11 @@ func (cfg *Config) LoadFromEnvironment(env env.Environment) {
 	} else if err != nil {
 		log.Fatal("Error reading telemd_disk_devices", err)
 	}
+	//if devices, ok, err := env.LookupFields("telem_gpu_devices"); err == nil && ok {
+	//	//cfg.Instruments.Gpu.Devices = devices
+	//} else if err != nil {
+	//	log.Fatal("Error reading telem_gpu_devices", err)
+	//}
 
 	for instrument := range cfg.Instruments.Periods {
 		key := "telemd_period_" + instrument

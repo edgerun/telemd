@@ -29,6 +29,7 @@ type InstrumentFactory interface {
 	NewCgroupCpuInstrument() Instrument
 	NewCgroupBlkioInstrument() Instrument
 	NewCgroupNetworkInstrument() Instrument
+	NewGpuFrequencyInstrument([]int) Instrument
 }
 
 type CpuInfoFrequencyInstrument struct{}
@@ -47,6 +48,17 @@ type CgroupCpuInstrument struct{}
 type CgroupBlkioInstrument struct{}
 type CgroupNetworkInstrument struct {
 	pids map[string]string
+}
+
+type DefaultGpuFrequencyInstrument struct {
+}
+
+type Arm64GpuFrequencyInstrument struct {
+	Devices []int
+}
+
+type X86GpuFrequencyInstrument struct {
+	Devices []int
 }
 
 func (CpuUtilInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
@@ -245,6 +257,18 @@ func (instr RamInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
 	channel.Put(telem.NewTelemetry("ram", float64(total-free)))
 }
 
+func (instr Arm64GpuFrequencyInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
+
+}
+
+func (instr X86GpuFrequencyInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
+
+}
+
+func (instr DefaultGpuFrequencyInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
+	// per default no gpu support
+}
+
 func (CgroupCpuInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
 	dirs := listFilterDir("/sys/fs/cgroup/cpuacct/docker", func(info os.FileInfo) bool {
 		return info.IsDir() && info.Name() != "." && info.Name() != ".."
@@ -385,12 +409,28 @@ func (d defaultInstrumentFactory) NewCgroupNetworkInstrument() Instrument {
 	}
 }
 
-type armInstrumentFactory struct {
+func (d defaultInstrumentFactory) NewGpuFrequencyInstrument(devices []int) Instrument {
+	return DefaultGpuFrequencyInstrument{}
+}
+
+type arm32InstrumentFactory struct {
 	defaultInstrumentFactory
+}
+
+type arm64InstrumentFactory struct {
+	defaultInstrumentFactory
+}
+
+func (a arm64InstrumentFactory) NewGpuFrequencyInstrument(devices []int) Instrument {
+	return Arm64GpuFrequencyInstrument{devices}
 }
 
 type x86InstrumentFactory struct {
 	defaultInstrumentFactory
+}
+
+func (x x86InstrumentFactory) NewGpuFrequencyInstrument(devices []int) Instrument {
+	return X86GpuFrequencyInstrument{devices}
 }
 
 func NewInstrumentFactory(arch string) InstrumentFactory {
@@ -398,8 +438,9 @@ func NewInstrumentFactory(arch string) InstrumentFactory {
 	case "amd64":
 		return x86InstrumentFactory{}
 	case "arm":
+		return arm32InstrumentFactory{}
 	case "arm64":
-		return armInstrumentFactory{}
+		return arm64InstrumentFactory{}
 	default:
 		log.Printf("Unknown arch %s, returning default factory", arch)
 	}
