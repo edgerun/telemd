@@ -11,7 +11,7 @@ RUN CGO_ENABLED=0 go build -o /usr/local/bin/telemd cmd/telemd/main.go
 #############
 ### prod ###
 #############
-FROM alpine
+FROM debian:stretch-slim
 COPY --from=builder /usr/local/bin /usr/local/bin
 RUN apk add iw
 
