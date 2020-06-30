@@ -86,6 +86,10 @@ int main ()
         type = NVML_MEMORY_UTILIZATION_SAMPLES;
         util = showUtilization (i, device, type, 1, 1);
         printf ("%d-%s-memory_util-%d\n", i, name , util);
+
+         int freq;
+        result = nvmlDeviceGetClock (device, NVML_CLOCK_GRAPHICS, NVML_CLOCK_ID_CURRENT, &freq);
+        printf ("%d-%s-gpu_freq-%d\n", i, name, freq);
     }
 
     result = nvmlShutdown ();
