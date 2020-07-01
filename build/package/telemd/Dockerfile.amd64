@@ -26,6 +26,7 @@ RUN CGO_ENABLED=0 go build -o /usr/local/bin/telemd cmd/telemd/main.go
 #############
 FROM debian:stretch-slim
 COPY --from=builder /usr/local/bin /usr/local/bin
+COPY --from=gpu-build /home/gpu_measurements /usr/local/bin/gpu_measurements
 COPY --from=gpu-build /home/gpu_measurements /
 RUN apk add iw
 
