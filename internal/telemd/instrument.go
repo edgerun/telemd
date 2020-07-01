@@ -303,7 +303,36 @@ func (instr Arm64GpuFrequencyInstrument) MeasureAndReport(channel telem.Telemetr
 }
 
 func (instr X86GpuFrequencyInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
+	var wg sync.WaitGroup
+	wg.Add(len(instr.Devices))
+	defer wg.Wait()
 
+	measureAndReport := func(id int) {
+		defer wg.Done()
+		frequencies, err := execute("gpu_freq", strconv.Itoa(id))
+		if err != nil {
+			log.Println("Error reading gpu measurements", err)
+		}
+
+		if len(frequencies) != 1 {
+			log.Println("Expected 1 cpu freqency measurement but were ", len(frequencies))
+			return
+		}
+
+		//Format: id-name-measure-value
+		values := strings.Split(frequencies[0], "-")
+		frequency, err := strconv.ParseFloat(values[3], 64)
+		if err != nil {
+			log.Println("Expected number from gpu frequency, but got: ", values[3])
+			return
+		}
+
+		channel.Put(telem.NewTelemetry("gpu_freq"+telem.TopicSeparator+strconv.Itoa(id), frequency))
+	}
+
+	for id, _ := range instr.Devices {
+		go measureAndReport(id)
+	}
 }
 
 func (instr DefaultGpuFrequencyInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
