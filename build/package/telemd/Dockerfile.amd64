@@ -12,6 +12,14 @@ COPY scripts/nvml/gpu_measurements.c example.c
 RUN make
 RUN mv example /home/gpu_measurements
 
+RUN make clean
+
+RUN rm example.c
+COPY scripts/nvml/list_gpus.c example.c
+RUN make
+RUN mv example /home/list_gpus
+
+
 #############
 ### build ###
 #############
@@ -27,6 +35,7 @@ RUN CGO_ENABLED=0 go build -o /usr/local/bin/telemd cmd/telemd/main.go
 FROM debian:stretch-slim
 COPY --from=builder /usr/local/bin /usr/local/bin
 COPY --from=gpu-build /home/gpu_measurements /usr/local/bin/gpu_measurements
+COPY --from=gpu-build /home/list_gpus /usr/local/bin/list_gpus
 COPY --from=gpu-build /home/gpu_measurements /
 RUN apk add iw
 
