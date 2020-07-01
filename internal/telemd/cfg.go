@@ -6,8 +6,9 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"os/exec"
+	"runtime"
 	"strconv"
+	"os/exec"
 	"strings"
 	"time"
 )
@@ -31,7 +32,7 @@ type Config struct {
 			Devices []string
 		}
 		Gpu struct {
-			Devices []int
+			Devices map[int]string
 		}
 	}
 	Mounts struct {
@@ -61,6 +62,8 @@ func NewDefaultConfig() *Config {
 	if err != nil {
 		log.Println(err)
 	}
+
+	cfg.Instruments.Gpu.Devices = gpuDevices()
 
 	cfg.Instruments.Periods = map[string]time.Duration{
 		"cpu":                    500 * time.Millisecond,
@@ -130,11 +133,22 @@ func (cfg *Config) LoadFromEnvironment(env env.Environment) {
 	} else if err != nil {
 		log.Fatal("Error reading telemd_disk_devices", err)
 	}
-	//if devices, ok, err := env.LookupFields("telem_gpu_devices"); err == nil && ok {
-	//	//cfg.Instruments.Gpu.Devices = devices
-	//} else if err != nil {
-	//	log.Fatal("Error reading telem_gpu_devices", err)
-	//}
+
+	if devices, ok, err := env.LookupFields("telem_gpu_devices"); err == nil && ok {
+		discoveredDevices := gpuDevices()
+		selectedDevices := map[int]string{}
+		for _, id := range devices {
+			a, err := strconv.Atoi(id)
+			if err != nil {
+				log.Fatal("Error reading telem_gpu_devices: Ids have to be integers")
+			} else {
+				selectedDevices[a] = discoveredDevices[a]
+			}
+		}
+		cfg.Instruments.Gpu.Devices = selectedDevices
+	} else if err != nil {
+		log.Fatal("Error reading telem_gpu_devices", err)
+	}
 
 	for instrument := range cfg.Instruments.Periods {
 		key := "telemd_period_" + instrument
@@ -229,3 +243,43 @@ func execCommand(args string) (string, error) {
 		return strings.TrimSpace(string(output)), nil
 	}
 }
+
+
+func x86Gpu() ([]string, error) {
+	devices, err := execute("list_gpus")
+	if err != nil {
+		return []string{}, nil
+	}
+
+	return devices, nil
+}
+
+func gpuDevices() map[int]string {
+	arch := runtime.GOARCH
+	var gpus []string
+	var err error
+	if arch == "arm64" {
+		gpus, err = arm64Gpu()
+	} else if arch == "amd64" {
+		gpus, err = x86Gpu()
+	} else {
+		return map[int]string{}
+	}
+
+	if err != nil {
+		log.Fatalln("error fetching gpu devices: ", err.Error())
+		return map[int]string{}
+	}
+
+	devices := map[int]string{}
+
+	for _, gpu := range gpus {
+		split := strings.Split(gpu, "-")
+		id, _ := strconv.Atoi(split[0])
+
+		devices[id] = split[1]
+	}
+
+	return devices
+}
+

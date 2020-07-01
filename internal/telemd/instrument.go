@@ -95,11 +95,11 @@ type DefaultGpuFrequencyInstrument struct {
 }
 
 type Arm64GpuFrequencyInstrument struct {
-	Devices []int
+	Devices map[int]string
 }
 
 type X86GpuFrequencyInstrument struct {
-	Devices []int
+	Devices map[int]string
 }
 
 func (CpuUtilInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
@@ -1055,7 +1055,7 @@ func (d defaultInstrumentFactory) NewDockerCgroupMemoryInstrument() Instrument {
 	}
 }
 
-func (d defaultInstrumentFactory) NewGpuFrequencyInstrument(devices []int) Instrument {
+func (d defaultInstrumentFactory) NewGpuFrequencyInstrument(devices map[int]string) Instrument {
 	return DefaultGpuFrequencyInstrument{}
 }
 
@@ -1067,7 +1067,7 @@ type arm64InstrumentFactory struct {
 	defaultInstrumentFactory
 }
 
-func (a arm64InstrumentFactory) NewGpuFrequencyInstrument(devices []int) Instrument {
+func (a arm64InstrumentFactory) NewGpuFrequencyInstrument(devices map[int]string) Instrument {
 	return Arm64GpuFrequencyInstrument{devices}
 }
 
@@ -1075,7 +1075,7 @@ type x86InstrumentFactory struct {
 	defaultInstrumentFactory
 }
 
-func (x x86InstrumentFactory) NewGpuFrequencyInstrument(devices []int) Instrument {
+func (x x86InstrumentFactory) NewGpuFrequencyInstrument(devices map[int]string) Instrument {
 	return X86GpuFrequencyInstrument{devices}
 }
 

@@ -57,7 +57,7 @@ func TestRamInstrument_MeasureAndReport(t *testing.T) {
 }
 
 func TestX86GpuFrequencyInstrument_MeasureAndReport(t *testing.T) {
-	instrument := X86GpuFrequencyInstrument{[]int{0}}
+	instrument := X86GpuFrequencyInstrument{map[int]string{0: "dummy_gpu"}}
 	tc := telem.NewTelemetryChannel()
 
 	go instrument.MeasureAndReport(tc)
