@@ -8,9 +8,16 @@ RUN apt update -y && apt install make
 WORKDIR /usr/local/cuda/nvml/example
 
 RUN rm example.c
-COPY scripts/nvml/gpu_measurements.c example.c
+COPY scripts/nvml/gpu_freq.c example.c
 RUN make
-RUN mv example /home/gpu_measurements
+RUN mv example /home/gpu_freq
+
+RUN make clean
+
+RUN rm example.c
+COPY scripts/nvml/gpu_util.c example.c
+RUN make
+RUN mv example /home/gpu_util
 
 RUN make clean
 
@@ -34,9 +41,9 @@ RUN CGO_ENABLED=0 go build -o /usr/local/bin/telemd cmd/telemd/main.go
 #############
 FROM debian:stretch-slim
 COPY --from=builder /usr/local/bin /usr/local/bin
-COPY --from=gpu-build /home/gpu_measurements /usr/local/bin/gpu_measurements
+COPY --from=gpu-build /home/gpu_freq /usr/local/bin/gpu_freq
 COPY --from=gpu-build /home/list_gpus /usr/local/bin/list_gpus
-COPY --from=gpu-build /home/gpu_measurements /
+COPY --from=gpu-build /home/gpu_util /usr/local/bin/gpu_util
 RUN apk add iw
 
 ENTRYPOINT telemd
