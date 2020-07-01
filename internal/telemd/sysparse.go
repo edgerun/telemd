@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"errors"
 	"os"
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -117,6 +118,31 @@ func bootTime() (int64, error) {
 	}
 	return time.Now().Unix() - int64(uptime), nil
 }
+
+func arm64Gpu() ([]string, error) {
+	// this only works on jetson devices!
+	// other way to list all gpu devices, though without knowing the jetson device:
+	// all gpu devices are mounted in /sys/devices, i.e. /sys/devices/gpu.0 <- works also in container (L4T base image)
+
+	// https://forums.developer.nvidia.com/t/how-to-identify-nano/72160
+	id, err := readFirstLine("/sys/module/tegra_fuse/parameters/tegra_chip_id")
+	if err != nil {
+		return []string{}, err
+	}
+
+	if id == "64" {
+		return []string{"0-Jetson TK1"}, nil
+	} else if id == "33" {
+		// according to the blog post above, jetson nano has the same id as tx1
+		// problem: /proc/device-tree/model not available in container
+		return []string{"0-Jetson TX1"}, nil
+	} else if id == "24" {
+		return []string{"0-Jetson TX2"}, nil
+	} else {
+		return []string{}, errors.New(fmt.Sprintf("unsupported tegra chip: %s", id))
+	}
+}
+
 
 //
 // Parses the net/dev file of a specific process, as follows:
