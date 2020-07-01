@@ -40,7 +40,7 @@ int showUtilization (unsigned int i, nvmlDevice_t device, nvmlSamplingType_t typ
     return average;
 }
 
-int main ()
+int main (int argc, char *argv[])
 {
     nvmlReturn_t result;
     unsigned int device_count, i;
@@ -59,38 +59,61 @@ int main ()
         fail();
     }
 
-    for (i = 0; i < device_count; i++) {
+    if (argc == 1) {
+        for (i = 0; i < device_count; i++) {
+                nvmlDevice_t device;
+                char name[64];
+
+                result = nvmlDeviceGetHandleByIndex (i, &device);
+                if (NVML_SUCCESS != result) {
+                    printf ("Error: failed to get handle for device %i: %s\n", i, nvmlErrorString (result));
+                    fail();
+                }
+
+                result = nvmlDeviceGetName (device, name, sizeof (name) / sizeof (name[0]));
+                if (NVML_SUCCESS != result) {
+                    printf ("Error: failed to get name of device %i: %s\n", i, nvmlErrorString (result));
+                    fail();
+                }
+
+                nvmlSamplingType_t type = NVML_GPU_UTILIZATION_SAMPLES;
+                int util = showUtilization (i, device, type, 1, 1);
+                printf ("%d-%s-gpu_util-%d\n", i, name,  util);
+
+        //        type = NVML_TOTAL_POWER_SAMPLES;
+        //        util = showUtilization (i, device, type, 1, 1);
+        //        printf ("%d-%s-total_power-%d\n", i, name , util);
+        //
+        //        type = NVML_MEMORY_UTILIZATION_SAMPLES;
+        //        util = showUtilization (i, device, type, 1, 1);
+        //        printf ("%d-%s-memory_util-%d\n", i, name , util);
+
+        }
+    } else if(argc == 2) {
         nvmlDevice_t device;
         char name[64];
+        int i = atoi(argv[1]);
 
         result = nvmlDeviceGetHandleByIndex (i, &device);
         if (NVML_SUCCESS != result) {
-            printf ("Failed to get handle for device %i: %s\n", i, nvmlErrorString (result));
+            printf ("Error: failed to get handle for device %i: %s\n", i, nvmlErrorString (result));
             fail();
         }
 
         result = nvmlDeviceGetName (device, name, sizeof (name) / sizeof (name[0]));
         if (NVML_SUCCESS != result) {
-            printf ("Failed to get name of device %i: %s\n", i, nvmlErrorString (result));
+            printf ("Error: failed to get name of device %i: %s\n", i, nvmlErrorString (result));
             fail();
         }
 
         nvmlSamplingType_t type = NVML_GPU_UTILIZATION_SAMPLES;
         int util = showUtilization (i, device, type, 1, 1);
         printf ("%d-%s-gpu_util-%d\n", i, name,  util);
-
-        type = NVML_TOTAL_POWER_SAMPLES;
-        util = showUtilization (i, device, type, 1, 1);
-        printf ("%d-%s-total_power-%d\n", i, name , util);
-
-        type = NVML_MEMORY_UTILIZATION_SAMPLES;
-        util = showUtilization (i, device, type, 1, 1);
-        printf ("%d-%s-memory_util-%d\n", i, name , util);
-
-         int freq;
-        result = nvmlDeviceGetClock (device, NVML_CLOCK_GRAPHICS, NVML_CLOCK_ID_CURRENT, &freq);
-        printf ("%d-%s-gpu_freq-%d\n", i, name, freq);
+    } else {
+        printf("Error: only zero or one argument supported");
     }
+
+
 
     result = nvmlShutdown ();
 
