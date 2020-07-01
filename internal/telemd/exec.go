@@ -7,8 +7,8 @@ import (
 
 // executes the given command and returns the output splitted by \n
 // removes the last line if it is empty
-func execute(program string) ([]string, error) {
-	cmd := exec.Command(program)
+func execute(program string, arg ...string) ([]string, error) {
+	cmd := exec.Command(program, arg...)
 
 	if output, err := cmd.Output(); err != nil {
 		return []string{}, err
