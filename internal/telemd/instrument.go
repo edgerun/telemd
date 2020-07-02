@@ -299,7 +299,14 @@ func (instr RamInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
 }
 
 func (instr Arm64GpuFrequencyInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
+	frequencyInHz, err := readJetsonFrequency()
+	if err != nil {
+		log.Println("Error reading jetson gpu frequency: ", err)
+		return
+	}
 
+	frequencyInMHz := frequencyInHz / (1_000_000)
+	channel.Put(telem.NewTelemetry("gpu_freq"+telem.TopicSeparator+"0", frequencyInMHz))
 }
 
 func (instr X86GpuFrequencyInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
@@ -309,6 +316,8 @@ func (instr X86GpuFrequencyInstrument) MeasureAndReport(channel telem.TelemetryC
 
 	measureAndReport := func(id int) {
 		defer wg.Done()
+
+		// gpu_freq already returns MHz
 		frequencies, err := execute("gpu_freq", strconv.Itoa(id))
 		if err != nil {
 			log.Println("Error reading gpu measurements", err)
