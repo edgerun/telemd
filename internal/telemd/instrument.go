@@ -959,6 +959,18 @@ func (k KuberenetesCgroupMemoryInstrument) MeasureAndReport(ch telem.TelemetryCh
 type defaultInstrumentFactory struct {
 }
 
+type arm32InstrumentFactory struct {
+	defaultInstrumentFactory
+}
+
+type arm64InstrumentFactory struct {
+	defaultInstrumentFactory
+}
+
+type x86InstrumentFactory struct {
+	defaultInstrumentFactory
+}
+
 func (d defaultInstrumentFactory) NewCpuFrequencyInstrument() Instrument {
 	return CpuScalingFrequencyInstrument{}
 }
@@ -1097,20 +1109,8 @@ func (d defaultInstrumentFactory) NewGpuFrequencyInstrument(devices map[int]stri
 	return DefaultGpuFrequencyInstrument{}
 }
 
-type arm32InstrumentFactory struct {
-	defaultInstrumentFactory
-}
-
-type arm64InstrumentFactory struct {
-	defaultInstrumentFactory
-}
-
 func (a arm64InstrumentFactory) NewGpuFrequencyInstrument(devices map[int]string) Instrument {
 	return Arm64GpuFrequencyInstrument{devices}
-}
-
-type x86InstrumentFactory struct {
-	defaultInstrumentFactory
 }
 
 func (x x86InstrumentFactory) NewGpuFrequencyInstrument(devices map[int]string) Instrument {
