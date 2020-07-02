@@ -60,6 +60,22 @@ func readCpuUtil() []float64 {
 	return values
 }
 
+// Returns the current frequency in Hz
+// https://docs.nvidia.com/jetson/archives/l4t-archived/l4t-3231/index.html#page/Tegra%2520Linux%2520Driver%2520Package%2520Development%2520Guide%2Fpower_management_tx2_32.html%23wwpID0E0GD0HA
+func readJetsonFrequency() (float64, error) {
+	line, err := readFirstLine("/sys/devices/gpu.0/devfreq/17000000.gp10b/cur_freq")
+	if err != nil {
+		return -1, err
+	}
+
+	value, err := strconv.ParseFloat(line, 64)
+	if err != nil {
+		return -1, err
+	}
+
+	return value, nil
+}
+
 func readMeminfo() map[string]string {
 	vals := make(map[string]string)
 
