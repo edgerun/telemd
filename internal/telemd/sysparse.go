@@ -76,6 +76,22 @@ func readJetsonFrequency() (float64, error) {
 	return value, nil
 }
 
+// Returns the current utilization of jetson gpu
+func readJetsonGpuUtilization() (float64, error) {
+	// value needs to be divided by 10, i.e. 999 => 99.9%
+	line, err := readFirstLine("/sys/devices/17000000.gp10b/load")
+	if err != nil {
+		return -1, err
+	}
+
+	value, err := strconv.ParseFloat(line, 64)
+	if err != nil {
+		return -1, err
+	}
+
+	return value / 10, nil
+}
+
 func readMeminfo() map[string]string {
 	vals := make(map[string]string)
 

@@ -61,7 +61,7 @@ func NewDefaultConfig() *Config {
 		"net":  500 * time.Millisecond,
 		"disk": 500 * time.Millisecond,
 		"gpu_freq": 1 * time.Second,
-		"gpu_util": 1 * time.Second,
+		"gpu_util": 2 * time.Second,
 		"cgrp_cpu":   1 * time.Second,
 		"cgrp_blkio": 1 * time.Second,
 		"cgrp_net":   1 * time.Second,

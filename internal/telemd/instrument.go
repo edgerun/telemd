@@ -325,7 +325,13 @@ func (instr DefaultGpuUtilInstrument) MeasureAndReport(channel telem.TelemetryCh
 }
 
 func (instr Arm64GpuUtilInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
-	panic("implement me")
+	gpuUtil, err := readJetsonGpuUtilization()
+	if err != nil {
+		log.Println("Error reading jetson gpu frequency: ", err)
+		return
+	}
+
+	channel.Put(telem.NewTelemetry("gpu_util"+telem.TopicSeparator+"0", gpuUtil))
 }
 
 func (instr X86GpuUtilInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
