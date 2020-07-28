@@ -6,4 +6,4 @@
 BASE="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 PROJECT_ROOT=$(realpath "${BASE}/../")
 
-docker build -t edgerun/telemd:latest-aarch64 -f build/package/telemd/Dockerfile.aarch64 .
+docker build -t edgerun/telemd:latest-amd64 -f build/package/telemd/Dockerfile.amd64 .
