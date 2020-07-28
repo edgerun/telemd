@@ -48,7 +48,8 @@ The default telemd runs the following instruments:
 * `cgrp_cpu` the cpu usage time of individual docker containers
 * `cgrp_blkio` the total block io usage in bytes for individual docker containers
 * `cgrp_net` the total network io usage in bytes for individual docker containers
-
+* `gpu_freq` the current clock frequency of GPUs
+* `gpu_util` GPU utilization of the last second in `%`
 ### Info keys
 
 When a telemetry daemon starts, it writes static information about its host into the Redis key 
@@ -64,6 +65,7 @@ It is a Redis hash has the following keys:
 | `disk`     | [str]  | The disk devices available for monitoring |
 | `net`      | [str]  | The network devices available for monitoring |
 | `hostname` | str    | The real hostname |
+| `gpu`      | [str]  | The GPUs available for monitoring (`id-name`) |
 | `netspeed` | str    | LAN/WLAN speed in Mbps |
 
 ### Talking back to hosts
@@ -95,7 +97,7 @@ The `telemd` command allows the following parameters via environment variables.
 | `telemd_period_<instrument>` |        | A duration string (`1s`, `500ms`, ...) that indicates how often the given `instrument` should be probed |
 | `telemd_instruments_enable`  | all    | A list of instruments to use (e.g. `"cpu freq"`), these will be the only instruments that are run (mutex with disable) |
 | `telemd_instruments_disable` | none   | A list of instruments to disable, all instruments will run except for these (mutex with enable, preferred if both are set) |
-
+| `telemd_gpu_devices`  | all           | A list of GPUs to be monitored, e.g. `0 1`. Monitors all devices per default |
 
 #### Configuration
 
