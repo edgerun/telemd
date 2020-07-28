@@ -69,11 +69,8 @@ The default telemd runs the following instruments:
 * `kubernetes_cgrp_memory` the total memory (RAM) usage in bytes for individual Kubernetes Pod containers
 * `kubernetes_cgrp_net` the total network io usage in bytes for individual Kubernetes Pod containers as well as for each interface and `rx` and `tx`
   * I.e.: `kubernetes_cgrp_net/<container-id>`, `kubernetes_cgrp_net/<container-id>/<interface>`, `kubernetes_cgrp_net/<container-id>/<interface>/[rx|tx]`
-
-### GPU Support
-
-For GPU support, please take a look at the [gpu-support branch](https://github.com/edgerun/telemd/tree/gpu-support).
-
+* `gpu_freq` the current clock frequency of GPUs
+* `gpu_util` GPU utilization of the last second in `%`
 ### Info keys
 
 When a telemetry daemon starts, it writes static information about its host into the Redis key 
@@ -89,6 +86,7 @@ It is a Redis hash has the following keys:
 | `disk`     | [str]  | The disk devices available for monitoring |
 | `net`      | [str]  | The network devices available for monitoring |
 | `hostname` | str    | The real hostname |
+| `gpu`      | [str]  | The GPUs available for monitoring (`id-name`) |
 | `netspeed` | str    | LAN/WLAN speed in Mbps |
 
 ### Talking back to hosts
@@ -120,8 +118,8 @@ The `telemd` command allows the following parameters via environment variables.
 | `telemd_period_<instrument>` |        | A duration string (`1s`, `500ms`, ...) that indicates how often the given `instrument` should be probed |
 | `telemd_instruments_enable`  | all    | A space seperated list of instruments to use (e.g. `"cpu freq"`), these will be the only instruments that are run (mutex with disable) |
 | `telemd_instruments_disable` | none   | A space seperated list of instruments to disable, all instruments will run except for these (mutex with enable, preferred if both are set) |
+| `telemd_gpu_devices`  | all           | A list of GPUs to be monitored, e.g. `0 1`. Monitors all devices per default |
 | `telemd_proc_mount`    | `/proc`      | Tells telemd where the `/proc` folder is mounted into the container. |
-
 #### Configuration
 
 To allow the global configuration of a fleet of `telemd` instances, telemd can also be configured via ini files.
