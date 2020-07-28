@@ -134,20 +134,20 @@ func (cfg *Config) LoadFromEnvironment(env env.Environment) {
 		log.Fatal("Error reading telemd_disk_devices", err)
 	}
 
-	if devices, ok, err := env.LookupFields("telem_gpu_devices"); err == nil && ok {
+	if devices, ok, err := env.LookupFields("telemd_gpu_devices"); err == nil && ok {
 		discoveredDevices := gpuDevices()
 		selectedDevices := map[int]string{}
 		for _, id := range devices {
 			a, err := strconv.Atoi(id)
 			if err != nil {
-				log.Fatal("Error reading telem_gpu_devices: Ids have to be integers")
+				log.Fatal("Error reading telemd_gpu_devices: Ids have to be integers")
 			} else {
 				selectedDevices[a] = discoveredDevices[a]
 			}
 		}
 		cfg.Instruments.Gpu.Devices = selectedDevices
 	} else if err != nil {
-		log.Fatal("Error reading telem_gpu_devices", err)
+		log.Fatal("Error reading telemd_gpu_devices", err)
 	}
 
 	for instrument := range cfg.Instruments.Periods {
