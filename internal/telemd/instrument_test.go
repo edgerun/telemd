@@ -6,6 +6,8 @@ import (
 	"testing"
 )
 
+// TODO: proper tests and use timeouts for channel reads
+
 func TestReadBlockDeviceStats(t *testing.T) {
 	stats := readBlockDeviceStats("loop0")
 
@@ -51,4 +53,41 @@ func TestRamInstrument_MeasureAndReport(t *testing.T) {
 		t.Error("Expected some RAM to be used")
 	}
 	log.Printf("%.4f\n", t1.Value)
+}
+
+func TestLoadInstrument_MeasureAndReport(t *testing.T) {
+	var instrument LoadInstrument
+	tc := telem.NewTelemetryChannel()
+
+	go instrument.MeasureAndReport(tc)
+
+	t0 := <-tc.Channel()
+	if t0.Topic != "load1" {
+		t.Error("Expected first value to be from load1")
+	}
+	log.Printf("%s: %.4f\n", t0.Topic, t0.Value)
+
+	t1 := <-tc.Channel()
+	if t1.Topic != "load5" {
+		t.Error("Expected first value to be from load1")
+	}
+	log.Printf("%s: %.4f\n", t1.Topic, t1.Value)
+
+}
+
+func TestProcsInstrument_MeasureAndReport(t *testing.T) {
+	var instrument ProcsInstrument
+	tc := telem.NewTelemetryChannel()
+
+	go instrument.MeasureAndReport(tc)
+
+	t0 := <-tc.Channel()
+
+	if t0.Topic != "procs" {
+		t.Error("Expected value to be from procs")
+	}
+	if t0.Value <= 0  {
+		t.Error("Expected some processes to run")
+	}
+	log.Printf("%s: %.4f\n", t0.Topic, t0.Value)
 }

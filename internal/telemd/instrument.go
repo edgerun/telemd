@@ -22,6 +22,7 @@ type InstrumentFactory interface {
 	NewCpuFrequencyInstrument() Instrument
 	NewCpuUtilInstrument() Instrument
 	NewLoadInstrument() Instrument
+	NewProcsInstrument() Instrument
 	NewRamInstrument() Instrument
 	NewNetworkDataRateInstrument([]string) Instrument
 	NewDiskDataRateInstrument([]string) Instrument
@@ -31,6 +32,7 @@ type CpuInfoFrequencyInstrument struct{}
 type CpuScalingFrequencyInstrument struct{}
 type CpuUtilInstrument struct{}
 type LoadInstrument struct{}
+type ProcsInstrument struct{}
 type RamInstrument struct{}
 type NetworkDataRateInstrument struct {
 	Devices []string
@@ -119,6 +121,19 @@ func (LoadInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
 	//	channel.Put(NewTelemetry("load15", val))
 	//}
 
+}
+
+func (ProcsInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
+	text, err := readFirstLine("/proc/loadavg")
+	check(err)
+
+	fields := strings.Split(text, " ")
+
+	procs := strings.Split(fields[3], "/")[0]
+
+	if val, err := strconv.ParseFloat(procs, 64); err == nil {
+		channel.Put(telem.NewTelemetry("procs", val))
+	}
 }
 
 func (instr NetworkDataRateInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
@@ -214,6 +229,10 @@ func (d defaultInstrumentFactory) NewCpuUtilInstrument() Instrument {
 
 func (d defaultInstrumentFactory) NewLoadInstrument() Instrument {
 	return LoadInstrument{}
+}
+
+func (d defaultInstrumentFactory) NewProcsInstrument() Instrument {
+	return ProcsInstrument{}
 }
 
 func (d defaultInstrumentFactory) NewRamInstrument() Instrument {
