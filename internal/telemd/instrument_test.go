@@ -86,7 +86,7 @@ func TestProcsInstrument_MeasureAndReport(t *testing.T) {
 	if t0.Topic != "procs" {
 		t.Error("Expected value to be from procs")
 	}
-	if t0.Value <= 0  {
+	if t0.Value <= 0 {
 		t.Error("Expected some processes to run")
 	}
 	log.Printf("%s: %.4f\n", t0.Topic, t0.Value)

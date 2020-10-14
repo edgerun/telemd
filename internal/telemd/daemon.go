@@ -36,13 +36,13 @@ func (daemon *Daemon) initInstruments(factory InstrumentFactory) {
 	cfg := daemon.cfg
 
 	daemon.instruments = map[string]Instrument{
-		"cpu":  factory.NewCpuUtilInstrument(),
-		"freq": factory.NewCpuFrequencyInstrument(),
-		"load": factory.NewLoadInstrument(),
+		"cpu":   factory.NewCpuUtilInstrument(),
+		"freq":  factory.NewCpuFrequencyInstrument(),
+		"load":  factory.NewLoadInstrument(),
 		"procs": factory.NewProcsInstrument(),
-		"ram":  factory.NewRamInstrument(),
-		"net":  factory.NewNetworkDataRateInstrument(cfg.Instruments.Net.Devices),
-		"disk": factory.NewDiskDataRateInstrument(cfg.Instruments.Disk.Devices),
+		"ram":   factory.NewRamInstrument(),
+		"net":   factory.NewNetworkDataRateInstrument(cfg.Instruments.Net.Devices),
+		"disk":  factory.NewDiskDataRateInstrument(cfg.Instruments.Disk.Devices),
 	}
 }
 

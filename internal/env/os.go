@@ -6,7 +6,7 @@ import (
 
 var OsEnv = &osEnvironment{}
 
-type osEnvironment struct {}
+type osEnvironment struct{}
 
 func (*osEnvironment) Set(key string, value string) {
 	err := os.Setenv(key, value)
