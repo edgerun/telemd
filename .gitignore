@@ -47,3 +47,6 @@ out/
 
 # JIRA plugin
 atlassian-ide-plugin.xml
+
+# redis database
+dump.rdb
