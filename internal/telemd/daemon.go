@@ -48,7 +48,7 @@ func (daemon *Daemon) initInstruments(factory InstrumentFactory) {
 
 func (daemon *Daemon) initTickers() {
 	for k, instrument := range daemon.instruments {
-		period, ok := daemon.cfg.Agent.Periods[k]
+		period, ok := daemon.cfg.Instruments.Periods[k]
 		if !ok {
 			log.Println("warning: no period assigned for instrument", k, "using 1")
 			period = 1 * time.Second
