@@ -79,12 +79,25 @@ func main() {
 		sigs := make(chan os.Signal, 1)
 		signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 		<-sigs
-		log.Println("stopping daemon")
+
+		log.Println("stopping command server")
 		commandServer.Stop()
-		_ = commandServer.RemoveNodeInfo()
+
+		if !reconnectingClient.IsRetrying() {
+			log.Println("removing node infos")
+			// TODO: check redis connection state
+			_ = commandServer.RemoveNodeInfo()
+		}
+
+		reconnectingClient.Close()
+
+		log.Println("stopping telemetry reporter")
 		telemetryReporter.Stop()
+
+		log.Println("stopping daemon")
 		daemon.Stop()
-		close(reconnectingClient.ConnectionState)
+
+		log.Print("all resources closed")
 	}()
 
 	// initiate redis connection by sending a PING
