@@ -3,6 +3,7 @@ package env
 import (
 	"strconv"
 	"strings"
+	"time"
 )
 
 type Environment interface {
@@ -21,6 +22,7 @@ type Environment interface {
 	LookupFloat(key string) (float64, bool, error)
 	LookupBool(key string) (bool, bool, error)
 	LookupFields(key string) ([]string, bool, error)
+	LookupDuration(key string) (time.Duration, bool, error)
 }
 
 func LookupInt(env Environment, key string) (int64, bool, error) {
@@ -55,5 +57,14 @@ func LookupBool(env Environment, key string) (bool, bool, error) {
 		return v, true, err
 	} else {
 		return false, false, nil
+	}
+}
+
+func LookupDuration(env Environment, key string) (time.Duration, bool, error) {
+	if value, ok := env.Lookup(key); ok {
+		v, err := time.ParseDuration(value)
+		return v, true, err
+	} else {
+		return 0, false, nil
 	}
 }
