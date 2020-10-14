@@ -2,6 +2,7 @@ package env
 
 import (
 	"gopkg.in/ini.v1"
+	"time"
 )
 
 type iniEnvironment struct {
@@ -58,4 +59,8 @@ func (env *iniEnvironment) LookupFields(key string) ([]string, bool, error) {
 
 func (env *iniEnvironment) LookupBool(key string) (bool, bool, error) {
 	return LookupBool(env, key)
+}
+
+func (env *iniEnvironment) LookupDuration(key string) (time.Duration, bool, error) {
+	return LookupDuration(env, key)
 }

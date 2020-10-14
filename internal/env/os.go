@@ -2,6 +2,7 @@ package env
 
 import (
 	"os"
+	"time"
 )
 
 var OsEnv = &osEnvironment{}
@@ -37,4 +38,8 @@ func (env *osEnvironment) LookupFields(key string) ([]string, bool, error) {
 
 func (env *osEnvironment) LookupBool(key string) (bool, bool, error) {
 	return LookupBool(env, key)
+}
+
+func (env *osEnvironment) LookupDuration(key string) (time.Duration, bool, error) {
+	return LookupDuration(env, key)
 }
