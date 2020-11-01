@@ -17,11 +17,9 @@ type Config struct {
 		URL          string
 		RetryBackoff time.Duration
 	}
-	Agent struct {
-		Periods map[string]time.Duration
-	}
 	Instruments struct {
-		Net struct {
+		Periods map[string]time.Duration
+		Net     struct {
 			Devices []string
 		}
 		Disk struct {
@@ -45,13 +43,14 @@ func NewDefaultConfig() *Config {
 	cfg.Instruments.Net.Devices = networkDevices()
 	cfg.Instruments.Disk.Devices = blockDevices()
 
-	cfg.Agent.Periods = map[string]time.Duration{
-		"cpu":  500 * time.Millisecond,
-		"freq": 500 * time.Millisecond,
-		"ram":  1 * time.Second,
-		"load": 5 * time.Second,
-		"net":  500 * time.Millisecond,
-		"disk": 500 * time.Millisecond,
+	cfg.Instruments.Periods = map[string]time.Duration{
+		"cpu":   500 * time.Millisecond,
+		"freq":  500 * time.Millisecond,
+		"procs": 500 * time.Millisecond,
+		"ram":   1 * time.Second,
+		"load":  5 * time.Second,
+		"net":   500 * time.Millisecond,
+		"disk":  500 * time.Millisecond,
 	}
 
 	return cfg
@@ -88,6 +87,17 @@ func (cfg *Config) LoadFromEnvironment(env env.Environment) {
 		cfg.Instruments.Disk.Devices = devices
 	} else if err != nil {
 		log.Fatal("Error reading telemd_disk_devices", err)
+	}
+
+	for instrument := range cfg.Instruments.Periods {
+		key := "telemd_period_" + instrument
+
+		if duration, ok, err := env.LookupDuration(key); err == nil && ok {
+			log.Println("setting duration of", instrument, "to", duration)
+			cfg.Instruments.Periods[instrument] = duration
+		} else if err != nil {
+			log.Fatal("Error reading "+key, err)
+		}
 	}
 
 }

@@ -2,6 +2,7 @@ package env
 
 import (
 	"testing"
+	"time"
 )
 
 func TestIniEnvironment_Lookup(t *testing.T) {
@@ -52,4 +53,23 @@ func TestIniSectionEnvironment_Lookup(t *testing.T) {
 		t.FailNow()
 	}
 
+	duration1Lookup, ok, err := env.LookupDuration("duration1")
+	if !ok {
+		t.Error("Expected environment to have 'duration1'")
+		t.FailNow()
+	}
+	if duration1Lookup != 100*time.Millisecond {
+		t.Error("Expected value: 100ms, actual: ", duration1Lookup)
+		t.FailNow()
+	}
+
+	duration2Lookup, ok, err := env.LookupDuration("duration2")
+	if !ok {
+		t.Error("Expected environment to have 'duration2'")
+		t.FailNow()
+	}
+	if duration2Lookup != 1*time.Second {
+		t.Error("Expected value: 1s, actual: ", duration2Lookup)
+		t.FailNow()
+	}
 }

@@ -36,18 +36,19 @@ func (daemon *Daemon) initInstruments(factory InstrumentFactory) {
 	cfg := daemon.cfg
 
 	daemon.instruments = map[string]Instrument{
-		"cpu":  factory.NewCpuUtilInstrument(),
-		"freq": factory.NewCpuFrequencyInstrument(),
-		"load": factory.NewLoadInstrument(),
-		"ram":  factory.NewRamInstrument(),
-		"net":  factory.NewNetworkDataRateInstrument(cfg.Instruments.Net.Devices),
-		"disk": factory.NewDiskDataRateInstrument(cfg.Instruments.Disk.Devices),
+		"cpu":   factory.NewCpuUtilInstrument(),
+		"freq":  factory.NewCpuFrequencyInstrument(),
+		"load":  factory.NewLoadInstrument(),
+		"procs": factory.NewProcsInstrument(),
+		"ram":   factory.NewRamInstrument(),
+		"net":   factory.NewNetworkDataRateInstrument(cfg.Instruments.Net.Devices),
+		"disk":  factory.NewDiskDataRateInstrument(cfg.Instruments.Disk.Devices),
 	}
 }
 
 func (daemon *Daemon) initTickers() {
 	for k, instrument := range daemon.instruments {
-		period, ok := daemon.cfg.Agent.Periods[k]
+		period, ok := daemon.cfg.Instruments.Periods[k]
 		if !ok {
 			log.Println("warning: no period assigned for instrument", k, "using 1")
 			period = 1 * time.Second

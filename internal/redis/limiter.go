@@ -5,10 +5,17 @@ import (
 	"time"
 )
 
+type ClientClosedError struct{}
+
+func (m *ClientClosedError) Error() string {
+	return "redis connection limiter has been closed"
+}
+
 type limiter struct {
 	backoffDuration     time.Duration
 	connectionFailures  int
 	connectionStateChan chan ConnectionState
+	closed              bool
 }
 
 func newLimiter(backoffDuration time.Duration, connectionStateChan chan ConnectionState) *limiter {
@@ -17,14 +24,30 @@ func newLimiter(backoffDuration time.Duration, connectionStateChan chan Connecti
 		backoffDuration:     backoffDuration,
 		connectionFailures:  connectionFailures,
 		connectionStateChan: connectionStateChan,
+		closed:              false,
 	}
 }
 
+func (l *limiter) close() {
+	l.closed = true
+}
+
+func (l *limiter) wait() {
+	// FIXME: because Allow can be called concurrently, we should linearize this though a mutex so one routine can wait
+	//  for a stopped signal and terminate immediately instead of waiting for the next Allow call and l.closed check
+	time.Sleep(l.backoffDuration)
+}
+
 func (l *limiter) Allow() error {
+	if l.closed {
+		return &ClientClosedError{}
+	}
+
 	if l.connectionFailures > 0 {
 		log.Printf("last connection attempt failed, backing off for %v\n", l.backoffDuration)
-		time.Sleep(l.backoffDuration)
+		l.wait()
 	}
+
 	return nil
 }
 
@@ -42,10 +65,6 @@ func (l *limiter) ReportResult(err error) {
 		}
 		l.connectionFailures = 0
 	} else {
-		if l.connectionFailures == -1 {
-			// don't enter failed state if we had no connection before
-			return
-		}
 		l.connectionFailures++
 		if l.connectionFailures == 1 {
 			// only report first connection error
