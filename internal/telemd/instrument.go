@@ -10,6 +10,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"os/exec"
+	"fmt"
 )
 
 type Instrument interface {
@@ -142,6 +144,18 @@ func (instr NetworkDataRateInstrument) MeasureAndReport(channel telem.TelemetryC
 		txNow, err := readLineAndParseInt(txPath)
 		check(err)
 
+		if strings.HasPrefix(device, "e"){
+                        speedPath := "/sys/class/net/" + device + "/speed"
+                        speed, err := readLineAndParseInt(speedPath)
+                        check(err)
+                        channel.Put(telem.NewTelemetry("link"+telem.TopicSeparator+device, float64(speed)))
+                } else if strings.HasPrefix(device, "w") {
+                        speedstr := exec_command(device)
+                        speed, err:= strconv.ParseInt(speedstr, 10, 64)
+                        check(err)
+                        channel.Put(telem.NewTelemetry("link"+telem.TopicSeparator+device, float64(speed)))
+                }
+
 		channel.Put(telem.NewTelemetry("tx"+telem.TopicSeparator+device, float64((txNow-txThen)/1000)))
 		channel.Put(telem.NewTelemetry("rx"+telem.TopicSeparator+device, float64((rxNow-rxThen)/1000)))
 		wg.Done()
@@ -255,3 +269,18 @@ func check(err error) {
 		panic(err)
 	}
 }
+
+func exec_command(device string) string {
+        args := "iw dev "+device+" link | awk -F '[ ]' '/tx bitrate:/{print $3}'"
+        cmd := exec.Command("sh","-c", args)
+        if output,err := cmd.Output(); err!= nil {
+                log.Printf( "Error fetching wifi bitrate: %s",err)
+        }else{
+                log.Printf( "wifi bitrate: %s",output)
+                str_output := strings.TrimSpace(string(output))
+                value, _ := strconv.ParseFloat(str_output,32)
+                return fmt.Sprint(int(value))
+        }
+        return ""
+}
+
