@@ -1,10 +1,13 @@
 package telemd
 
 import (
+	"fmt"
 	"github.com/edgerun/telemd/internal/env"
 	"io/ioutil"
 	"log"
 	"os"
+	"os/exec"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -144,4 +147,39 @@ func blockDevices() []string {
 	return listFilterDir("/sys/block", func(info os.FileInfo) bool {
 		return !info.IsDir() && !strings.HasPrefix(info.Name(), "loop")
 	})
+}
+
+func netSpeed() string {
+	activeNetDevice := findActiveNetDevice()
+	wirelessPath := "/sys/class/net/" + activeNetDevice + "/wireless"
+	if fileDirExists(wirelessPath) {
+		return findWifiSpeed(activeNetDevice)
+	} else {
+		path := "/sys/class/net/" + activeNetDevice + "/speed"
+		speed, err := readFirstLine(path)
+		check(err)
+		return speed
+	}
+}
+func findActiveNetDevice() string {
+	args := "route | awk 'NR==3{print $8}'"
+	return execCommand(args)
+}
+
+func findWifiSpeed(device string) string {
+	args := "iw dev " + device + " link | awk -F '[ ]' '/tx bitrate:/{print $3}'"
+	speed := execCommand(args)
+	//parse float to int
+	value, _ := strconv.ParseFloat(speed, 32)
+	return fmt.Sprint(int(value))
+}
+func execCommand(args string) string {
+	cmd := exec.Command("sh", "-c", args)
+	if output, err := cmd.Output(); err != nil {
+		log.Printf("Error executing command: %s", err)
+	} else {
+		log.Printf("wifi bitrate: %s", output)
+		return strings.TrimSpace(string(output))
+	}
+	return ""
 }

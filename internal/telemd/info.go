@@ -14,6 +14,7 @@ type NodeInfo struct {
 	Disk     []string
 	Net      []string
 	Hostname string
+	NetSpeed string
 }
 
 func (info NodeInfo) Print() {
@@ -24,6 +25,7 @@ func (info NodeInfo) Print() {
 	fmt.Println("Disk:     ", info.Disk)
 	fmt.Println("Net:      ", info.Net)
 	fmt.Println("Hostname: ", info.Hostname)
+	fmt.Println("netSpeed: ", info.NetSpeed)
 }
 
 func SysInfo() NodeInfo {
@@ -61,6 +63,7 @@ func ReadSysInfo(info *NodeInfo) error {
 		return err
 	}
 	info.Hostname = hostname
+	info.NetSpeed = netSpeed()
 
 	return nil
 }
