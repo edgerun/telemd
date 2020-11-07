@@ -93,6 +93,7 @@ func WriteNodeInfo(client *redis.Client, nodeName string, info NodeInfo) error {
 	multi.HSet(key, "cpus", info.Cpus)
 	multi.HSet(key, "disk", strings.Join(info.Disk, " "))
 	multi.HSet(key, "net", strings.Join(info.Net, " "))
+	multi.HSet(key, "ethernetSpeed", info.EthernetSpeed)
 
 	_, err := multi.Exec()
 	return err

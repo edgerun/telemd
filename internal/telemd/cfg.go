@@ -130,3 +130,16 @@ func blockDevices() []string {
 		return !info.IsDir() && !strings.HasPrefix(info.Name(), "loop")
 	})
 }
+
+func ethernetSpeed() string {
+	devices := networkDevices()
+	for dev:= range devices {
+		if strings.HasPrefix(string(dev), "e"){
+			speedPath := "/sys/class/net/" + string(dev) + "/speed"
+			speed, err := readLineAndParseInt(speedPath)
+			check(err)
+			return string(speed);
+		}
+	}
+	return ""
+}
