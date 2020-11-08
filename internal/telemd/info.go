@@ -2,6 +2,7 @@ package telemd
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"runtime"
 )
@@ -63,6 +64,7 @@ func ReadSysInfo(info *NodeInfo) error {
 		return err
 	}
 	info.Hostname = hostname
+	log.Println("set ethernet speed")
 	info.EthSpeed = ethSpeed()
 
 	return nil
