@@ -137,7 +137,6 @@ func ethSpeed() string {
 		if strings.HasPrefix(dev, "e"){
 			path := "/sys/class/net/" + dev + "/speed"
 			speed, err := readFirstLine(path)
-			log.Println("speed", speed)
 			check(err)
 			return speed;
 		}
