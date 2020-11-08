@@ -132,11 +132,10 @@ func blockDevices() []string {
 }
 
 func ethSpeed() string {
-	log.Println("collect ethernet speed")
 	devices := networkDevices()
 	log.Println("devices", devices)
-	for dev:= range devices {
-		log.Println("dev", dev)
+	for i, dev:= range devices {
+		log.Println("dev",i, dev)
 		if strings.HasPrefix(string(dev), "e"){
 			speedPath := "/sys/class/net/" + string(dev) + "/speed"
 			log.Println("speedPath", speedPath)
