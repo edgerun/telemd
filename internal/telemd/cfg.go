@@ -133,16 +133,13 @@ func blockDevices() []string {
 
 func ethSpeed() string {
 	devices := networkDevices()
-	log.Println("devices", devices)
-	for i, dev:= range devices {
-		log.Println("dev",i, dev)
-		if strings.HasPrefix(string(dev), "e"){
-			speedPath := "/sys/class/net/" + string(dev) + "/speed"
-			log.Println("speedPath", speedPath)
-			speed, err := readLineAndParseInt(speedPath)
+	for _, dev:= range devices {
+		if strings.HasPrefix(dev, "e"){
+			path := "/sys/class/net/" + dev + "/speed"
+			speed, err := readFirstLine(path)
 			log.Println("speed", speed)
 			check(err)
-			return string(speed);
+			return speed;
 		}
 	}
 	return ""
