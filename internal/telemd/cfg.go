@@ -131,12 +131,17 @@ func blockDevices() []string {
 	})
 }
 
-func ethernetSpeed() string {
+func ethSpeed() string {
+	log.Println("collect ethernet speed")
 	devices := networkDevices()
+	log.Println("devices", devices)
 	for dev:= range devices {
+		log.Println("dev", dev)
 		if strings.HasPrefix(string(dev), "e"){
 			speedPath := "/sys/class/net/" + string(dev) + "/speed"
+			log.Println("speedPath", speedPath)
 			speed, err := readLineAndParseInt(speedPath)
+			log.Println("speed", speed)
 			check(err)
 			return string(speed);
 		}
