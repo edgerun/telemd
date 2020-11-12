@@ -1,10 +1,13 @@
 package telemd
 
 import (
+	"fmt"
 	"github.com/edgerun/telemd/internal/env"
 	"io/ioutil"
 	"log"
 	"os"
+	"os/exec"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -131,7 +134,7 @@ func blockDevices() []string {
 	})
 }
 
-func ethSpeed() string {
+func netSpeed() string {
 	devices := networkDevices()
 	for _, dev:= range devices {
 		if strings.HasPrefix(dev, "e"){
@@ -139,7 +142,24 @@ func ethSpeed() string {
 			speed, err := readFirstLine(path)
 			check(err)
 			return speed;
+		} else if strings.HasPrefix(dev, "w") {
+			speed := exec_command(dev)
+			return speed;
 		}
+	}
+	return ""
+}
+
+func exec_command(device string) string {
+	args := "iw dev "+device+" link | awk -F '[ ]' '/tx bitrate:/{print $3}'"
+	cmd := exec.Command("sh","-c", args)
+	if output,err := cmd.Output(); err!= nil {
+		log.Printf( "Error fetching wifi bitrate: %s",err)
+	}else{
+		log.Printf( "wifi bitrate: %s",output)
+		str_output := strings.TrimSpace(string(output))
+		value, _ := strconv.ParseFloat(str_output,32)
+		return fmt.Sprint(int(value))
 	}
 	return ""
 }

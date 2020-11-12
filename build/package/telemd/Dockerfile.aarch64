@@ -13,5 +13,6 @@ RUN CGO_ENABLED=0 GOARCH=arm64 go build -v -o /usr/local/bin/telemd cmd/telemd/m
 #############
 FROM aarch64/alpine
 COPY --from=builder /usr/local/bin /usr/local/bin
+RUN apk add iw
 
 ENTRYPOINT telemd
