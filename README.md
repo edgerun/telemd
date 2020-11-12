@@ -61,6 +61,7 @@ It is a Redis hash has the following keys:
 | `disk`     | [str]  | The disk devices available for monitoring |
 | `net`      | [str]  | The network devices available for monitoring |
 | `hostname` | str    | The real hostname |
+| `netspeed` | str    | Lan/Wlan speed in Mbps|
 
 ### Talking back to hosts
 

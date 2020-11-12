@@ -145,7 +145,6 @@ func netSpeed() string {
 		check(err)
 		return speed;
 	}
-	return ""
 }
 func findActiveNetDevice() string {
 	args := "route | awk 'NR==3{print $8}'"
@@ -155,6 +154,7 @@ func findActiveNetDevice() string {
 func findWifiSpeed(device string) string {
 	args := "iw dev "+device+" link | awk -F '[ ]' '/tx bitrate:/{print $3}'"
 	speed := execCommand(args)
+	//parse float to int
 	value, _ := strconv.ParseFloat(speed,32)
 	return fmt.Sprint(int(value))
 }
