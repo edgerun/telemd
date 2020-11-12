@@ -135,31 +135,36 @@ func blockDevices() []string {
 }
 
 func netSpeed() string {
-	devices := networkDevices()
-	for _, dev:= range devices {
-		if strings.HasPrefix(dev, "e"){
-			path := "/sys/class/net/" + dev + "/speed"
-			speed, err := readFirstLine(path)
-			check(err)
-			return speed;
-		} else if strings.HasPrefix(dev, "w") {
-			speed := exec_command(dev)
-			return speed;
-		}
+	activeNetDevice := findActiveNetDevice()
+	wirelessPath := "/sys/class/net/" + activeNetDevice + "/wireless"
+	if fileDirExists(wirelessPath) {
+		return findWifiSpeed(activeNetDevice)
+	}else {
+		path := "/sys/class/net/" + activeNetDevice + "/speed"
+		speed, err := readFirstLine(path)
+		check(err)
+		return speed;
 	}
 	return ""
 }
+func findActiveNetDevice() string {
+	args := "route | awk 'NR==3{print $8}'"
+	return execCommand(args)
+}
 
-func exec_command(device string) string {
+func findWifiSpeed(device string) string {
 	args := "iw dev "+device+" link | awk -F '[ ]' '/tx bitrate:/{print $3}'"
+	speed := execCommand(args)
+	value, _ := strconv.ParseFloat(speed,32)
+	return fmt.Sprint(int(value))
+}
+func execCommand(args string) string {
 	cmd := exec.Command("sh","-c", args)
 	if output,err := cmd.Output(); err!= nil {
-		log.Printf( "Error fetching wifi bitrate: %s",err)
+		log.Printf( "Error executing command: %s",err)
 	}else{
 		log.Printf( "wifi bitrate: %s",output)
-		str_output := strings.TrimSpace(string(output))
-		value, _ := strconv.ParseFloat(str_output,32)
-		return fmt.Sprint(int(value))
+		return strings.TrimSpace(string(output))
 	}
 	return ""
 }
