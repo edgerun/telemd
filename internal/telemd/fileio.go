@@ -76,3 +76,4 @@ func fileDirExists(filename string) bool {
 	}
 	return true
 }
+
