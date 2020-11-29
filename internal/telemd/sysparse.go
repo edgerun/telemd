@@ -63,7 +63,28 @@ func readCpuUtil() []float64 {
 // Returns the current frequency in Hz
 // https://docs.nvidia.com/jetson/archives/l4t-archived/l4t-3231/index.html#page/Tegra%2520Linux%2520Driver%2520Package%2520Development%2520Guide%2Fpower_management_tx2_32.html%23wwpID0E0GD0HA
 func readJetsonFrequency() (float64, error) {
-	line, err := readFirstLine("/sys/devices/gpu.0/devfreq/17000000.gp10b/cur_freq")
+	id, err := readTegraChipId()
+
+	if err != nil {
+		return -1, err
+	}
+
+	var folder string
+
+	if id == "24" {
+		// tx2
+		folder = "17000000.gp10b"
+	} else if id == "25" {
+		// xavier nx
+		folder = "17000000.gv11b"
+	} else if id == "33" {
+		// nano OR tx1
+		folder = "57000000.gpu"
+	} else {
+		return -1, errors.New(fmt.Sprintf("unsupported tegra chip: %s", id))
+	}
+
+	line, err := readFirstLine(fmt.Sprintf("/sys/devices/gpu.0/devfreq/%s/cur_freq", folder))
 	if err != nil {
 		return -1, err
 	}
@@ -79,7 +100,7 @@ func readJetsonFrequency() (float64, error) {
 // Returns the current utilization of jetson gpu
 func readJetsonGpuUtilization() (float64, error) {
 	// value needs to be divided by 10, i.e. 999 => 99.9%
-	line, err := readFirstLine("/sys/devices/17000000.gp10b/load")
+	line, err := readFirstLine("/sys/devices/gpu.0/load")
 	if err != nil {
 		return -1, err
 	}
@@ -157,22 +178,32 @@ func arm64Gpu() ([]string, error) {
 	// all gpu devices are mounted in /sys/devices, i.e. /sys/devices/gpu.0 <- works also in container (L4T base image)
 
 	// https://forums.developer.nvidia.com/t/how-to-identify-nano/72160
-	id, err := readFirstLine("/sys/module/tegra_fuse/parameters/tegra_chip_id")
+	id, err := readTegraChipId()
 	if err != nil {
-		return []string{}, err
+		return nil, err
 	}
 
 	if id == "64" {
 		return []string{"0-Jetson TK1"}, nil
 	} else if id == "33" {
-		// according to the blog post above, jetson nano has the same id as tx1
+		// according to the blog post above, jetson tx1 has the same id as tx1
 		// problem: /proc/device-tree/model not available in container
-		return []string{"0-Jetson TX1"}, nil
+		return []string{"0-Jetson Nano"}, nil
 	} else if id == "24" {
 		return []string{"0-Jetson TX2"}, nil
+	} else if id == "25" {
+		return []string{"0-Jetson Xavier NX"}, nil
 	} else {
 		return []string{}, errors.New(fmt.Sprintf("unsupported tegra chip: %s", id))
 	}
+}
+
+func readTegraChipId() (string, error) {
+	id, err := readFirstLine("/sys/module/tegra_fuse/parameters/tegra_chip_id")
+	if err != nil {
+		return "", err
+	}
+	return id, nil
 }
 
 
