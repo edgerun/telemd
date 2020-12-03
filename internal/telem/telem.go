@@ -29,8 +29,12 @@ type telemetryChannel struct {
 }
 
 func NewTelemetry(topic string, value float64) Telemetry {
+	return NewNodeTelemetry(NodeName, topic, value)
+}
+
+func NewNodeTelemetry(nodeName string, topic string, value float64) Telemetry {
 	return Telemetry{
-		Node:  NodeName,
+		Node:  nodeName,
 		Topic: topic,
 		Time:  time.Now(),
 		Value: value,

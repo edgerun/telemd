@@ -43,6 +43,8 @@ func (daemon *Daemon) initInstruments(factory InstrumentFactory) {
 		"ram":   factory.NewRamInstrument(),
 		"net":   factory.NewNetworkDataRateInstrument(cfg.Instruments.Net.Devices),
 		"disk":  factory.NewDiskDataRateInstrument(cfg.Instruments.Disk.Devices),
+		"cgrp_cpu":  factory.NewCgroupCpuInstrument(),
+		"cgrp_blkio":  factory.NewCgroupBlkioInstrument(),
 	}
 }
 

@@ -26,6 +26,8 @@ type InstrumentFactory interface {
 	NewRamInstrument() Instrument
 	NewNetworkDataRateInstrument([]string) Instrument
 	NewDiskDataRateInstrument([]string) Instrument
+	NewCgroupCpuInstrument() Instrument
+	NewCgroupBlkioInstrument() Instrument
 }
 
 type CpuInfoFrequencyInstrument struct{}
@@ -40,6 +42,8 @@ type NetworkDataRateInstrument struct {
 type DiskDataRateInstrument struct {
 	Devices []string
 }
+type CgroupCpuInstrument struct{}
+type CgroupBlkioInstrument struct{}
 
 func (CpuUtilInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
 	then := readCpuUtil()
@@ -217,6 +221,55 @@ func (instr RamInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
 	channel.Put(telem.NewTelemetry("ram", float64(total-free)))
 }
 
+func (CgroupCpuInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
+	dirs := listFilterDir("/sys/fs/cgroup/cpuacct/docker", func(info os.FileInfo) bool {
+		return info.IsDir() && info.Name() != "." && info.Name() != ".."
+	})
+
+	for _, containerId := range dirs {
+		dataFile := "/sys/fs/cgroup/cpuacct/docker/" + containerId + "/cpuacct.usage"
+		value, err := readLineAndParseInt(dataFile)
+		if err != nil {
+			log.Println("error reading data file", dataFile, err)
+			continue
+		}
+		channel.Put(telem.NewTelemetry("cgrp_cpu/" + containerId[:12], float64(value)))
+	}
+}
+
+
+func readBlkioTotal(path string) (val int64, err error) {
+	visitorErr := visitLines(path, func(line string) bool {
+		if strings.HasPrefix(line, "Total") {
+			val, err = strconv.ParseInt(strings.Split(line, " ")[1], 10, 64)
+			return false
+		}
+		return true
+	})
+
+	if visitorErr != nil {
+		return val, visitorErr
+	}
+
+	return
+}
+
+func (CgroupBlkioInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
+	dirs := listFilterDir("/sys/fs/cgroup/blkio/docker", func(info os.FileInfo) bool {
+		return info.IsDir() && info.Name() != "." && info.Name() != ".."
+	})
+
+	for _, containerId := range dirs {
+		dataFile := "/sys/fs/cgroup/blkio/docker/" + containerId + "/blkio.throttle.io_service_bytes"
+		value, err := readBlkioTotal(dataFile)
+		if err != nil {
+			log.Println("error reading data file", dataFile, err)
+			continue
+		}
+		channel.Put(telem.NewTelemetry("cgrp_blkio/" + containerId[:12], float64(value)))
+	}
+}
+
 type defaultInstrumentFactory struct{}
 
 func (d defaultInstrumentFactory) NewCpuFrequencyInstrument() Instrument {
@@ -245,6 +298,14 @@ func (d defaultInstrumentFactory) NewNetworkDataRateInstrument(devices []string)
 
 func (d defaultInstrumentFactory) NewDiskDataRateInstrument(devices []string) Instrument {
 	return DiskDataRateInstrument{devices}
+}
+
+func (d defaultInstrumentFactory) NewCgroupCpuInstrument() Instrument {
+	return CgroupCpuInstrument{}
+}
+
+func (d defaultInstrumentFactory) NewCgroupBlkioInstrument() Instrument {
+	return CgroupBlkioInstrument{}
 }
 
 type armInstrumentFactory struct {
