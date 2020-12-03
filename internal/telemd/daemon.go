@@ -35,16 +35,35 @@ func NewDaemon(cfg *Config) *Daemon {
 func (daemon *Daemon) initInstruments(factory InstrumentFactory) {
 	cfg := daemon.cfg
 
-	daemon.instruments = map[string]Instrument{
-		"cpu":   factory.NewCpuUtilInstrument(),
-		"freq":  factory.NewCpuFrequencyInstrument(),
-		"load":  factory.NewLoadInstrument(),
-		"procs": factory.NewProcsInstrument(),
-		"ram":   factory.NewRamInstrument(),
-		"net":   factory.NewNetworkDataRateInstrument(cfg.Instruments.Net.Devices),
-		"disk":  factory.NewDiskDataRateInstrument(cfg.Instruments.Disk.Devices),
-		"cgrp_cpu":  factory.NewCgroupCpuInstrument(),
-		"cgrp_blkio":  factory.NewCgroupBlkioInstrument(),
+	instruments := map[string]Instrument{
+		"cpu":        factory.NewCpuUtilInstrument(),
+		"freq":       factory.NewCpuFrequencyInstrument(),
+		"load":       factory.NewLoadInstrument(),
+		"procs":      factory.NewProcsInstrument(),
+		"ram":        factory.NewRamInstrument(),
+		"net":        factory.NewNetworkDataRateInstrument(cfg.Instruments.Net.Devices),
+		"disk":       factory.NewDiskDataRateInstrument(cfg.Instruments.Disk.Devices),
+		"cgrp_cpu":   factory.NewCgroupCpuInstrument(),
+		"cgrp_blkio": factory.NewCgroupBlkioInstrument(),
+	}
+
+	if cfg.Instruments.Disable != nil && (len(cfg.Instruments.Disable) > 0) {
+		log.Println("disabling instruments", cfg.Instruments.Disable)
+		for _, instr := range cfg.Instruments.Disable {
+			delete(instruments, instr)
+		}
+		daemon.instruments = instruments
+	} else if cfg.Instruments.Enable != nil && (len(cfg.Instruments.Enable) > 0) {
+		log.Println("enabling instruments", cfg.Instruments.Enable)
+		daemon.instruments = make(map[string]Instrument, len(cfg.Instruments.Enable))
+
+		for _, key := range cfg.Instruments.Enable {
+			if value, ok := instruments[key]; ok {
+				daemon.instruments[key] = value
+			}
+		}
+	} else {
+		daemon.instruments = instruments
 	}
 }
 

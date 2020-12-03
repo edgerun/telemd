@@ -233,10 +233,9 @@ func (CgroupCpuInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
 			log.Println("error reading data file", dataFile, err)
 			continue
 		}
-		channel.Put(telem.NewTelemetry("cgrp_cpu/" + containerId[:12], float64(value)))
+		channel.Put(telem.NewTelemetry("cgrp_cpu/"+containerId[:12], float64(value)))
 	}
 }
-
 
 func readBlkioTotal(path string) (val int64, err error) {
 	visitorErr := visitLines(path, func(line string) bool {
@@ -266,7 +265,7 @@ func (CgroupBlkioInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
 			log.Println("error reading data file", dataFile, err)
 			continue
 		}
-		channel.Put(telem.NewTelemetry("cgrp_blkio/" + containerId[:12], float64(value)))
+		channel.Put(telem.NewTelemetry("cgrp_blkio/"+containerId[:12], float64(value)))
 	}
 }
 

@@ -18,6 +18,8 @@ type Config struct {
 		RetryBackoff time.Duration
 	}
 	Instruments struct {
+		Enable  []string
+		Disable []string
 		Periods map[string]time.Duration
 		Net     struct {
 			Devices []string
@@ -102,6 +104,17 @@ func (cfg *Config) LoadFromEnvironment(env env.Environment) {
 		}
 	}
 
+	if fields, ok, err := env.LookupFields("telemd_instruments_enable"); err == nil && ok {
+		cfg.Instruments.Enable = fields
+	} else if err != nil {
+		log.Fatal("Error reading telemd_instruments_enable", err)
+	}
+
+	if fields, ok, err := env.LookupFields("telemd_instruments_disable"); err == nil && ok {
+		cfg.Instruments.Disable = fields
+	} else if err != nil {
+		log.Fatal("Error reading telemd_instruments_disable", err)
+	}
 }
 
 func listFilterDir(dirname string, predicate func(info os.FileInfo) bool) []string {
