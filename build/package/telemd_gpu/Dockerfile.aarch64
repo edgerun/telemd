@@ -2,16 +2,16 @@
 #############
 ### build ###
 #############
-FROM golang:alpine3.14 as builder
+FROM golang as builder
 
 ADD . /go/src/github.com/edgerun/go-telemd
 WORKDIR /go/src/github.com/edgerun/go-telemd
-RUN CGO_ENABLED=0 go build -o /usr/local/bin/telemd cmd/telemd/main.go
+RUN CGO_ENABLED=0 GOARCH=arm64 go build -v -o /usr/local/bin/telemd cmd/telemd/main.go
 
 #############
 ### prod ###
 #############
-FROM alpine
+FROM aarch64/alpine
 COPY --from=builder /usr/local/bin /usr/local/bin
 RUN apk add iw
 
