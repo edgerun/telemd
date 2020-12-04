@@ -16,9 +16,9 @@ PROJECT_ROOT=$(realpath "${BASE}/../../")
 cd $PROJECT_ROOT
 
 # build all the images
-docker build -t ${basetag}-amd64 -f build/package/telemd/Dockerfile.amd64 .
-docker build -t ${basetag}-arm32v7 -f build/package/telemd/Dockerfile.arm32v7 .
-docker build -t ${basetag}-aarch64 -f build/package/telemd/Dockerfile.aarch64 .
+docker build -t ${basetag}-amd64 -f build/package/telemd_gpu/Dockerfile.amd64 .
+docker build -t ${basetag}-arm32v7 -f build/package/telemd_gpu/Dockerfile.arm32v7 .
+docker build -t ${basetag}-aarch64 -f build/package/telemd_gpu/Dockerfile.aarch64 .
 
 # # push em all
 docker push ${basetag}-amd64 &
