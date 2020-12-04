@@ -18,7 +18,6 @@ type NodeInfo struct {
 	Hostname string
 	Gpu      map[int]string
 	NetSpeed string
-
 }
 
 func (info NodeInfo) Print() {
@@ -95,5 +94,4 @@ func ReadSysInfo(info *NodeInfo) {
 
 	info.Gpu = gpuDevices()
 
-	return nil
 }
