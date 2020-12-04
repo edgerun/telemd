@@ -1,0 +1,49 @@
+# syntax=docker/dockerfile:experimental
+#################
+### gpu-build ###
+#################
+FROM nvidia/cuda as gpu-build
+
+RUN apt update -y && apt install make
+WORKDIR /usr/local/cuda/nvml/example
+
+RUN rm example.c
+COPY scripts/gpu/nvml/gpu_freq.c example.c
+RUN make
+RUN mv example /home/gpu_freq
+
+RUN make clean
+
+RUN rm example.c
+COPY scripts/gpu/nvml/gpu_util.c example.c
+RUN make
+RUN mv example /home/gpu_util
+
+RUN make clean
+
+RUN rm example.c
+COPY scripts/gpu/nvml/list_gpus.c example.c
+RUN make
+RUN mv example /home/list_gpus
+
+
+#############
+### build ###
+#############
+FROM golang as builder
+
+ADD . /go/src/github.com/edgerun/go-telemd
+WORKDIR /go/src/github.com/edgerun/go-telemd
+RUN CGO_ENABLED=0 go build -o /usr/local/bin/telemd cmd/telemd/main.go
+
+#############
+### prod ###
+#############
+FROM debian:stretch-slim
+COPY --from=builder /usr/local/bin /usr/local/bin
+COPY --from=gpu-build /home/gpu_freq /usr/local/bin/gpu_freq
+COPY --from=gpu-build /home/list_gpus /usr/local/bin/list_gpus
+COPY --from=gpu-build /home/gpu_util /usr/local/bin/gpu_util
+RUN apk add iw
+
+ENTRYPOINT telemd
