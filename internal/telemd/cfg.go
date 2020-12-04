@@ -6,9 +6,9 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"os/exec"
 	"runtime"
 	"strconv"
-	"os/exec"
 	"strings"
 	"time"
 )
@@ -54,14 +54,15 @@ func NewDefaultConfig() *Config {
 	cfg.Instruments.Gpu.Devices = gpuDevices()
 
 	cfg.Instruments.Periods = map[string]time.Duration{
-		"cpu":  500 * time.Millisecond,
-		"freq": 500 * time.Millisecond,
-		"ram":  1 * time.Second,
-		"load": 5 * time.Second,
-		"net":  500 * time.Millisecond,
-		"disk": 500 * time.Millisecond,
-		"gpu_freq": 1 * time.Second,
-		"gpu_util": 1 * time.Second,
+		"cpu":        500 * time.Millisecond,
+		"freq":       500 * time.Millisecond,
+		"procs":      500 * time.Millisecond,
+		"ram":        1 * time.Second,
+		"load":       5 * time.Second,
+		"net":        500 * time.Millisecond,
+		"disk":       500 * time.Millisecond,
+		"gpu_freq":   1 * time.Second,
+		"gpu_util":   1 * time.Second,
 		"cgrp_cpu":   1 * time.Second,
 		"cgrp_blkio": 1 * time.Second,
 		"cgrp_net":   1 * time.Second,
@@ -214,7 +215,6 @@ func execCommand(args string) (string, error) {
 	}
 }
 
-
 func x86Gpu() ([]string, error) {
 	devices, err := execute("list_gpus")
 	if err != nil {
@@ -252,4 +252,3 @@ func gpuDevices() map[int]string {
 
 	return devices
 }
-
