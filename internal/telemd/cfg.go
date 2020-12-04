@@ -6,9 +6,9 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"os/exec"
 	"runtime"
 	"strconv"
-	"os/exec"
 	"strings"
 	"time"
 )
@@ -244,7 +244,6 @@ func execCommand(args string) (string, error) {
 	}
 }
 
-
 func x86Gpu() ([]string, error) {
 	devices, err := execute("list_gpus")
 	if err != nil {
@@ -282,4 +281,3 @@ func gpuDevices() map[int]string {
 
 	return devices
 }
-
