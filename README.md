@@ -47,6 +47,7 @@ The default telemd runs the following instruments:
 * `procs` the number of processes running at the current time
 * `cgrp_cpu` the cpu usage time of individual docker containers
 * `cgrp_blkio` the total block io usage in bytes for individual docker containers
+* `cgrp_net` the total network io usage in bytes for individual docker containers
 
 ### Info keys
 
@@ -63,7 +64,7 @@ It is a Redis hash has the following keys:
 | `disk`     | [str]  | The disk devices available for monitoring |
 | `net`      | [str]  | The network devices available for monitoring |
 | `hostname` | str    | The real hostname |
-| `netspeed` | str    | Lan/Wlan speed in Mbps|
+| `netspeed` | str    | LAN/WLAN speed in Mbps |
 
 ### Talking back to hosts
 
