@@ -140,7 +140,7 @@ func (ProcsInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
 	}
 }
 
-func (instr NetworkDataRateInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
+func (instr *NetworkDataRateInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
 	var wg sync.WaitGroup
 	wg.Add(len(instr.Devices))
 	defer wg.Wait()
@@ -150,16 +150,27 @@ func (instr NetworkDataRateInstrument) MeasureAndReport(channel telem.TelemetryC
 		txPath := "/sys/class/net/" + device + "/statistics/tx_bytes"
 
 		rxThen, err := readLineAndParseInt(rxPath)
-		check(err)
+		if err != nil {
+			log.Println("error while reading path", rxPath, err)
+			return
+		}
 		txThen, err := readLineAndParseInt(txPath)
-		check(err)
-
+		if err != nil {
+			log.Println("error while reading path", txPath, err)
+			return
+		}
 		time.Sleep(1 * time.Second)
 
 		rxNow, err := readLineAndParseInt(rxPath)
-		check(err)
+		if err != nil {
+			log.Println("error while reading path", rxPath, err)
+			return
+		}
 		txNow, err := readLineAndParseInt(txPath)
-		check(err)
+		if err != nil {
+			log.Println("error while reading path", txPath, err)
+			return
+		}
 
 		channel.Put(telem.NewTelemetry("tx"+telem.TopicSeparator+device, float64((txNow-txThen)/1000)))
 		channel.Put(telem.NewTelemetry("rx"+telem.TopicSeparator+device, float64((rxNow-rxThen)/1000)))
@@ -173,7 +184,7 @@ func (instr NetworkDataRateInstrument) MeasureAndReport(channel telem.TelemetryC
 
 const sectorSize = 512
 
-func (instr DiskDataRateInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
+func (instr *DiskDataRateInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
 	var wg sync.WaitGroup
 	wg.Add(len(instr.Devices))
 	defer wg.Wait()
@@ -181,9 +192,18 @@ func (instr DiskDataRateInstrument) MeasureAndReport(channel telem.TelemetryChan
 	measureAndReport := func(device string) {
 		defer wg.Done()
 
-		statsThen := readBlockDeviceStats(device)
+		statsThen, err := readBlockDeviceStats(device)
+		if err != nil {
+			log.Println("error reading block device stats", device, err)
+			return
+		}
+
 		time.Sleep(1 * time.Second)
-		statsNow := readBlockDeviceStats(device)
+		statsNow, err := readBlockDeviceStats(device)
+		if err != nil {
+			log.Println("error reading block device stats", device, err)
+			return
+		}
 
 		rd := (statsNow[2] - statsThen[2]) * sectorSize
 		wr := (statsNow[6] - statsThen[6]) * sectorSize
@@ -292,11 +312,11 @@ func (d defaultInstrumentFactory) NewRamInstrument() Instrument {
 }
 
 func (d defaultInstrumentFactory) NewNetworkDataRateInstrument(devices []string) Instrument {
-	return NetworkDataRateInstrument{devices}
+	return &NetworkDataRateInstrument{devices}
 }
 
 func (d defaultInstrumentFactory) NewDiskDataRateInstrument(devices []string) Instrument {
-	return DiskDataRateInstrument{devices}
+	return &DiskDataRateInstrument{devices}
 }
 
 func (d defaultInstrumentFactory) NewCgroupCpuInstrument() Instrument {

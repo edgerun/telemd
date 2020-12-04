@@ -24,15 +24,19 @@ import (
 // 12   discard merges  requests      number of discard I/Os merged with in-queue I/O
 // 13   discard sectors sectors       number of sectors discarded
 // 14   discard ticks   milliseconds  total wait time for discard requests
-func readBlockDeviceStats(dev string) []int64 {
+func readBlockDeviceStats(dev string) ([]int64, error) {
 	path := "/sys/block/" + dev + "/stat"
 
 	line, err := readFirstLine(path)
-	check(err)
+	if err != nil {
+		return nil, err
+	}
 
 	values, err := parseInt64Array(strings.Fields(line))
-	check(err)
-	return values
+	if err != nil {
+		return values, err
+	}
+	return values, nil
 }
 
 // readCpuUtil returns an array of the following values from /proc/stat

@@ -9,7 +9,7 @@ import (
 // TODO: proper tests and use timeouts for channel reads
 
 func TestReadBlockDeviceStats(t *testing.T) {
-	stats := readBlockDeviceStats("loop0")
+	stats, _ := readBlockDeviceStats("loop0")
 
 	if len(stats) < 15 {
 		t.Error("Expected at least 15 stats values")
