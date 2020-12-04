@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-image=edgerun/telemd
+image=edgerun/telemd-gpu
 
 if [[ $1 ]]; then
 	version="$1"
@@ -12,7 +12,7 @@ basetag="${image}:${version}"
 
 # change into project root
 BASE="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-PROJECT_ROOT=$(realpath "${BASE}/../")
+PROJECT_ROOT=$(realpath "${BASE}/../../")
 cd $PROJECT_ROOT
 
 # build all the images
