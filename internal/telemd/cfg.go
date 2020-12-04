@@ -58,6 +58,7 @@ func NewDefaultConfig() *Config {
 		"disk":       500 * time.Millisecond,
 		"cgrp_cpu":   1 * time.Second,
 		"cgrp_blkio": 1 * time.Second,
+		"cgrp_net":   1 * time.Second,
 	}
 
 	return cfg

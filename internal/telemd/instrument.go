@@ -28,6 +28,7 @@ type InstrumentFactory interface {
 	NewDiskDataRateInstrument([]string) Instrument
 	NewCgroupCpuInstrument() Instrument
 	NewCgroupBlkioInstrument() Instrument
+	NewCgroupNetworkInstrument() Instrument
 }
 
 type CpuInfoFrequencyInstrument struct{}
@@ -44,6 +45,9 @@ type DiskDataRateInstrument struct {
 }
 type CgroupCpuInstrument struct{}
 type CgroupBlkioInstrument struct{}
+type CgroupNetworkInstrument struct {
+	pids map[string]string
+}
 
 func (CpuUtilInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
 	then := readCpuUtil()
@@ -257,6 +261,48 @@ func (CgroupCpuInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
 	}
 }
 
+func (c *CgroupNetworkInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
+	containerIds := listFilterDir("/sys/fs/cgroup/cpuacct/docker", func(info os.FileInfo) bool {
+		return info.IsDir() && info.Name() != "." && info.Name() != ".."
+	})
+
+	if len(containerIds) == 0 {
+		return
+	}
+
+	for _, containerId := range containerIds {
+		pid, ok := c.pids[containerId]
+
+		if !ok {
+			// refresh pids
+			pids, err := containerProcessIds()
+			if err != nil {
+				log.Println("unable to get container process ids", err)
+				continue
+			}
+			c.pids = pids
+
+			pid, ok = c.pids[containerId]
+			if !ok {
+				log.Println("could not get pid of container after refresh", containerId)
+				continue
+			}
+		}
+
+		rx, tx, err := readTotalProcessNetworkStats(pid)
+		if err != nil {
+			if os.IsNotExist(err) {
+				delete(c.pids, containerId) // delete now and wait for next iteration to refresh
+			} else {
+				log.Println("error parsing network stats of pid", pid, err, err)
+			}
+			continue
+		}
+
+		channel.Put(telem.NewTelemetry("cgrp_net/"+containerId[:12], float64(rx+tx)))
+	}
+}
+
 func readBlkioTotal(path string) (val int64, err error) {
 	visitorErr := visitLines(path, func(line string) bool {
 		if strings.HasPrefix(line, "Total") {
@@ -325,6 +371,18 @@ func (d defaultInstrumentFactory) NewCgroupCpuInstrument() Instrument {
 
 func (d defaultInstrumentFactory) NewCgroupBlkioInstrument() Instrument {
 	return CgroupBlkioInstrument{}
+}
+
+func (d defaultInstrumentFactory) NewCgroupNetworkInstrument() Instrument {
+	pidMap, err := containerProcessIds()
+
+	if err != nil {
+		log.Println("unable to get process ids of containers", err)
+	}
+
+	return &CgroupNetworkInstrument{
+		pids: pidMap,
+	}
 }
 
 type armInstrumentFactory struct {

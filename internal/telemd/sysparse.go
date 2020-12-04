@@ -1,7 +1,9 @@
 package telemd
 
 import (
+	"bufio"
 	"errors"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -114,4 +116,62 @@ func bootTime() (int64, error) {
 		return 0, err
 	}
 	return time.Now().Unix() - int64(uptime), nil
+}
+
+//
+// Parses the net/dev file of a specific process, as follows:
+
+// thomas@om ~ % cat /proc/114204/net/dev
+// Inter-|   Receive                                                |  Transmit
+//  face |bytes    packets errs drop fifo frame compressed multicast|bytes    packets errs drop fifo colls carrier compressed
+//   eth0:    6391      29    0    0    0     0          0         0        0       0    0    0    0     0       0          0
+//     lo:       0       0    0    0    0     0          0         0        0       0    0    0    0     0       0          0
+// returns the sum over all network devices (rx, tx)
+func readTotalProcessNetworkStats(pid string) (rx int64, tx int64, err error) {
+	path := "/proc/" + pid + "/net/dev"
+
+	file, err := os.Open(path)
+	if err != nil {
+		return
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	scanner.Scan() // first header
+	scanner.Scan() // second header
+
+	for scanner.Scan() {
+		fields := strings.Fields(scanner.Text())
+
+		irx, err := parseInt64(fields[1])
+		if err != nil {
+			return rx, tx, err
+		}
+		itx, err := parseInt64(fields[9])
+		if err != nil {
+			return rx, tx, err
+		}
+
+		rx += irx
+		tx += itx
+	}
+
+	return rx, tx, scanner.Err()
+}
+
+func containerProcessIds() (map[string]string, error) {
+	command, err := execCommand("docker ps -q | xargs docker inspect --format '{{ .Id }} {{ .State.Pid }}'")
+
+	if err != nil {
+		return nil, err
+	}
+
+	lines := strings.Split(command, "\n")
+	pidmap := make(map[string]string, len(lines))
+	for _, line := range lines {
+		fields := strings.Split(line, " ")
+		pidmap[fields[0]] = fields[1]
+	}
+
+	return pidmap, err
 }

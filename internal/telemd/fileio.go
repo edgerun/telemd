@@ -27,12 +27,16 @@ func visitLines(path string, visitor func(string) bool) error {
 	return scanner.Err()
 }
 
+func parseInt64(str string) (int64, error) {
+	return strconv.ParseInt(str, 10, 64)
+}
+
 func parseInt64Array(arr []string) ([]int64, error) {
 	ints := make([]int64, len(arr))
 	var err error = nil
 
 	for i := 0; i < len(arr); i++ {
-		ints[i], err = strconv.ParseInt(arr[i], 10, 64)
+		ints[i], err = parseInt64(arr[i])
 		if err != nil {
 			return ints, err
 		}

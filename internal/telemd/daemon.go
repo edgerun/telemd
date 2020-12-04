@@ -45,6 +45,7 @@ func (daemon *Daemon) initInstruments(factory InstrumentFactory) {
 		"disk":       factory.NewDiskDataRateInstrument(cfg.Instruments.Disk.Devices),
 		"cgrp_cpu":   factory.NewCgroupCpuInstrument(),
 		"cgrp_blkio": factory.NewCgroupBlkioInstrument(),
+		"cgrp_net":   factory.NewCgroupNetworkInstrument(),
 	}
 
 	if cfg.Instruments.Disable != nil && (len(cfg.Instruments.Disable) > 0) {
