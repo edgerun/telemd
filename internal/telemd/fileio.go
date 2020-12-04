@@ -68,3 +68,11 @@ func readLineAndParseInt(path string) (int64, error) {
 	}
 	return strconv.ParseInt(line, 10, 64)
 }
+
+func fileDirExists(filename string) bool {
+	_, err := os.Stat(filename)
+	if os.IsNotExist(err) {
+		return false
+	}
+	return true
+}

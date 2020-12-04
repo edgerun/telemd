@@ -1,10 +1,13 @@
 package telemd
 
 import (
+	"fmt"
 	"github.com/edgerun/telemd/internal/env"
 	"io/ioutil"
 	"log"
 	"os"
+	"os/exec"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -144,4 +147,46 @@ func blockDevices() []string {
 	return listFilterDir("/sys/block", func(info os.FileInfo) bool {
 		return !info.IsDir() && !strings.HasPrefix(info.Name(), "loop")
 	})
+}
+
+func netSpeed() (string, error) {
+	activeNetDevice, err := findActiveNetDevice()
+	if err != nil {
+		return "", err
+	}
+	wirelessPath := "/sys/class/net/" + activeNetDevice + "/wireless"
+	if fileDirExists(wirelessPath) {
+		return findWifiSpeed(activeNetDevice)
+	} else {
+		path := "/sys/class/net/" + activeNetDevice + "/speed"
+		return readFirstLine(path)
+	}
+}
+
+func findActiveNetDevice() (string, error) {
+	args := "route | awk 'NR==3{print $8}'"
+	return execCommand(args)
+}
+
+func findWifiSpeed(device string) (string, error) {
+	args := "iw dev " + device + " link | awk -F '[ ]' '/tx bitrate:/{print $3}'"
+	speed, err := execCommand(args)
+	if err != nil {
+		return speed, err
+	}
+	//parse float to int
+	value, err := strconv.ParseFloat(speed, 32)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprint(int(value)), nil
+}
+
+func execCommand(args string) (string, error) {
+	cmd := exec.Command("sh", "-c", args)
+	if output, err := cmd.Output(); err != nil {
+		return "", err
+	} else {
+		return strings.TrimSpace(string(output)), nil
+	}
 }

@@ -13,5 +13,6 @@ RUN CGO_ENABLED=0 go build -o /usr/local/bin/telemd cmd/telemd/main.go
 #############
 FROM alpine
 COPY --from=builder /usr/local/bin /usr/local/bin
+RUN apk add iw
 
 ENTRYPOINT telemd
