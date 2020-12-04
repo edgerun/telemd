@@ -44,6 +44,7 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 COPY --from=gpu-build /home/gpu_freq /usr/local/bin/gpu_freq
 COPY --from=gpu-build /home/list_gpus /usr/local/bin/list_gpus
 COPY --from=gpu-build /home/gpu_util /usr/local/bin/gpu_util
-RUN apk add iw
+
+RUN apt update -y && apt install iw -y
 
 ENTRYPOINT telemd
