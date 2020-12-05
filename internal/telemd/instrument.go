@@ -92,26 +92,12 @@ type KubernetesCgroupv1NetworkInstrument struct {
 	procMount string
 }
 
-type DefaultGpuFrequencyInstrument struct {
-}
+var DisabledInstrument = noopInstrument{}
 
-type Arm64GpuFrequencyInstrument struct {
-	Devices map[int]string
-}
+type noopInstrument struct{}
 
-type X86GpuFrequencyInstrument struct {
-	Devices map[int]string
-}
-
-type DefaultGpuUtilInstrument struct {
-}
-
-type Arm64GpuUtilInstrument struct {
-	Devices map[int]string
-}
-
-type X86GpuUtilInstrument struct {
-	Devices map[int]string
+func (noopInstrument) MeasureAndReport(telem.TelemetryChannel) {
+	// noop
 }
 
 func (CpuUtilInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
@@ -1163,30 +1149,6 @@ func (d defaultInstrumentFactory) NewDockerCgroupMemoryInstrument() Instrument {
 	} else {
 		return DockerCgroupv2MemoryInstrument{}
 	}
-}
-
-func (d defaultInstrumentFactory) NewGpuFrequencyInstrument(devices map[int]string) Instrument {
-	return DefaultGpuFrequencyInstrument{}
-}
-
-func (a arm64InstrumentFactory) NewGpuFrequencyInstrument(devices map[int]string) Instrument {
-	return Arm64GpuFrequencyInstrument{devices}
-}
-
-func (x x86InstrumentFactory) NewGpuFrequencyInstrument(devices map[int]string) Instrument {
-	return X86GpuFrequencyInstrument{devices}
-}
-
-func (d defaultInstrumentFactory) NewGpuUtilInstrument(devices map[int]string) Instrument {
-	return DefaultGpuUtilInstrument{}
-}
-
-func (a arm64InstrumentFactory) NewGpuUtilInstrument(devices map[int]string) Instrument {
-	return Arm64GpuUtilInstrument{devices}
-}
-
-func (x x86InstrumentFactory) NewGpuUtilInstrument(devices map[int]string) Instrument {
-	return X86GpuUtilInstrument{devices}
 }
 
 func NewInstrumentFactory(arch string) InstrumentFactory {
