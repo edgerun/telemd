@@ -42,7 +42,7 @@ The default telemd runs the following instruments:
 * `freq` The sum of clock frequencies of the main CPUs
 * `ram` RAM currently used in kilobytes
 * `disk` Disk I/O rate averaged in bytes/second
-* `net` Network I/O rate averaged in bytes/second
+* `net` Network I/O rate averaged in kilobytes/second
 * `load` the system load average of the last 1 and 5 minutes
 * `procs` the number of processes running at the current time
 * `cgrp_cpu` the cpu usage time of individual docker containers
