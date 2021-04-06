@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -30,6 +31,9 @@ type Config struct {
 		Disk struct {
 			Devices []string
 		}
+		Gpu struct {
+			Devices map[int]string
+		}
 	}
 }
 
@@ -47,6 +51,7 @@ func NewDefaultConfig() *Config {
 
 	cfg.Instruments.Net.Devices = networkDevices()
 	cfg.Instruments.Disk.Devices = blockDevices()
+	cfg.Instruments.Gpu.Devices = gpuDevices()
 
 	cfg.Instruments.Periods = map[string]time.Duration{
 		"cpu":        500 * time.Millisecond,
@@ -56,6 +61,8 @@ func NewDefaultConfig() *Config {
 		"load":       5 * time.Second,
 		"net":        500 * time.Millisecond,
 		"disk":       500 * time.Millisecond,
+		"gpu_freq":   1 * time.Second,
+		"gpu_util":   1 * time.Second,
 		"cgrp_cpu":   1 * time.Second,
 		"cgrp_blkio": 1 * time.Second,
 		"cgrp_net":   1 * time.Second,
@@ -95,6 +102,22 @@ func (cfg *Config) LoadFromEnvironment(env env.Environment) {
 		cfg.Instruments.Disk.Devices = devices
 	} else if err != nil {
 		log.Fatal("Error reading telemd_disk_devices", err)
+	}
+
+	if devices, ok, err := env.LookupFields("telemd_gpu_devices"); err == nil && ok {
+		discoveredDevices := gpuDevices()
+		selectedDevices := map[int]string{}
+		for _, id := range devices {
+			a, err := strconv.Atoi(id)
+			if err != nil {
+				log.Fatal("Error reading telemd_gpu_devices: Ids have to be integers")
+			} else {
+				selectedDevices[a] = discoveredDevices[a]
+			}
+		}
+		cfg.Instruments.Gpu.Devices = selectedDevices
+	} else if err != nil {
+		log.Fatal("Error reading telemd_gpu_devices", err)
 	}
 
 	for instrument := range cfg.Instruments.Periods {
@@ -190,4 +213,42 @@ func execCommand(args string) (string, error) {
 	} else {
 		return strings.TrimSpace(string(output)), nil
 	}
+}
+
+func x86Gpu() ([]string, error) {
+	devices, err := execute("list_gpus")
+	if err != nil {
+		return []string{}, nil
+	}
+
+	return devices, nil
+}
+
+func gpuDevices() map[int]string {
+	arch := runtime.GOARCH
+	var gpus []string
+	var err error
+	if arch == "arm64" {
+		gpus, err = arm64Gpu()
+	} else if arch == "amd64" {
+		gpus, err = x86Gpu()
+	} else {
+		return map[int]string{}
+	}
+
+	if err != nil {
+		log.Fatalln("error fetching gpu devices: ", err.Error())
+		return map[int]string{}
+	}
+
+	devices := map[int]string{}
+
+	for _, gpu := range gpus {
+		split := strings.Split(gpu, "-")
+		id, _ := strconv.Atoi(split[0])
+
+		devices[id] = split[1]
+	}
+
+	return devices
 }

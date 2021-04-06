@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"runtime"
+	"strings"
 )
 
 type NodeInfo struct {
@@ -15,6 +16,7 @@ type NodeInfo struct {
 	Disk     []string
 	Net      []string
 	Hostname string
+	Gpu      map[int]string
 	NetSpeed string
 }
 
@@ -27,6 +29,20 @@ func (info NodeInfo) Print() {
 	fmt.Println("Net:      ", info.Net)
 	fmt.Println("Hostname: ", info.Hostname)
 	fmt.Println("netSpeed: ", info.NetSpeed)
+	fmt.Printf("Gpu:       [%s]\n", info.GpuInfo())
+}
+
+func (info NodeInfo) GpuInfo() string {
+	if len(info.Gpu) == 0 {
+		return ""
+	} else {
+		list := make([]string, 0)
+		for id, gpu := range info.Gpu {
+			list = append(list, fmt.Sprintf("%d-%s", id, gpu))
+		}
+
+		return strings.Join(list, " ")
+	}
 }
 
 func SysInfo() NodeInfo {
@@ -67,4 +83,7 @@ func ReadSysInfo(info *NodeInfo) {
 	} else {
 		log.Println("error reading network speed info", err)
 	}
+
+	info.Gpu = gpuDevices()
+
 }
