@@ -2,7 +2,7 @@
 #############
 ### build ###
 #############
-FROM golang as builder
+FROM golang:alpine3.14@sha256:250264658d8f5967ce63100b0cdd60e1664e8298dd67db8fade55878c16f9dcb as builder
 
 ADD . /go/src/github.com/edgerun/go-telemd
 WORKDIR /go/src/github.com/edgerun/go-telemd
@@ -13,6 +13,7 @@ RUN CGO_ENABLED=0 GOARCH=arm64 go build -v -o /usr/local/bin/telemd cmd/telemd/m
 #############
 FROM aarch64/alpine
 COPY --from=builder /usr/local/bin /usr/local/bin
+RUN apk update
 RUN apk add iw
 
 ENTRYPOINT telemd

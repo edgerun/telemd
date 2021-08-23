@@ -2,7 +2,7 @@
 #############
 ### build ###
 #############
-FROM golang as builder
+FROM golang:alpine3.14@sha256:108df97aebd7abe49cd8e8cce3de30b5389dab748d4d13b0269a29886bb91090 as builder
 
 ADD . /go/src/github.com/edgerun/go-telemd
 WORKDIR /go/src/github.com/edgerun/go-telemd
