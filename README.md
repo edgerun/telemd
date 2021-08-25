@@ -45,10 +45,14 @@ The default telemd runs the following instruments:
 * `net` Network I/O rate averaged in kilobytes/second
 * `load` the system load average of the last 1 and 5 minutes
 * `procs` the number of processes running at the current time
-* `cgrp_cpu` the cpu usage time of individual docker containers
-* `cgrp_blkio` the total block io usage in bytes for individual docker containers
-* `cgrp_net` the total network io usage in bytes for individual docker containers
+* `cgrp_cpu` the cpu usage time of individual containers
+* `cgrp_blkio` the total block io usage in bytes for individual containers
+* `cgrp_net` the total network io usage in bytes for individual containers
 
+
+#### Note regarding containers: 
+Telemd supports containers that are started via `docker` but can also monitor containers that
+run in Kubernetes Pods. Which mode is used can be configured via environment variables.
 ### Info keys
 
 When a telemetry daemon starts, it writes static information about its host into the Redis key 
@@ -95,7 +99,7 @@ The `telemd` command allows the following parameters via environment variables.
 | `telemd_period_<instrument>` |        | A duration string (`1s`, `500ms`, ...) that indicates how often the given `instrument` should be probed |
 | `telemd_instruments_enable`  | all    | A list of instruments to use (e.g. `"cpu freq"`), these will be the only instruments that are run (mutex with disable) |
 | `telemd_instruments_disable` | none   | A list of instruments to disable, all instruments will run except for these (mutex with enable, preferred if both are set) |
-
+| `telemd_instruments_cgroup_mode` | docker | The used container runtime on the host. Currently supported: `docker`, `kubernetes`
 
 #### Configuration
 

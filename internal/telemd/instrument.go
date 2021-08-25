@@ -26,9 +26,9 @@ type InstrumentFactory interface {
 	NewRamInstrument() Instrument
 	NewNetworkDataRateInstrument([]string) Instrument
 	NewDiskDataRateInstrument([]string) Instrument
-	NewCgroupCpuInstrument() Instrument
-	NewCgroupBlkioInstrument() Instrument
-	NewCgroupNetworkInstrument() Instrument
+	NewCgroupCpuInstrument(cgroupMode CgroupMode) Instrument
+	NewCgroupBlkioInstrument(cgroupMode CgroupMode) Instrument
+	NewCgroupNetworkInstrument(cgroupMode CgroupMode) Instrument
 }
 
 type CpuInfoFrequencyInstrument struct{}
@@ -43,11 +43,25 @@ type NetworkDataRateInstrument struct {
 type DiskDataRateInstrument struct {
 	Devices []string
 }
-type CgroupCpuInstrument struct{}
-type CgroupBlkioInstrument struct{}
-type CgroupNetworkInstrument struct {
+type CgroupCpuInstrument interface {
+	MeasureAndReport(channel telem.TelemetryChannel)
+}
+type CgroupBlkioInstrument interface {
+	MeasureAndReport(channel telem.TelemetryChannel)
+}
+type CgroupNetworkInstrument interface {
+	MeasureAndReport(channel telem.TelemetryChannel)
+}
+
+type DockerCgroupCpuInstrument struct{}
+type DockerCgroupBlkioInstrument struct{}
+type DockerCgroupNetworkInstrument struct {
 	pids map[string]string
 }
+
+type KubernetesCgroupCpuInstrument struct{}
+type KubernetesCgroupBlkioInstrument struct{}
+type KubernetesCgroupNetworkInstrument struct{}
 
 func (CpuUtilInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
 	then := readCpuUtil()
@@ -245,7 +259,7 @@ func (instr RamInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
 	channel.Put(telem.NewTelemetry("ram", float64(total-free)))
 }
 
-func (CgroupCpuInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
+func (DockerCgroupCpuInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
 	dirs := listFilterDir("/sys/fs/cgroup/cpuacct/docker", func(info os.FileInfo) bool {
 		return info.IsDir() && info.Name() != "." && info.Name() != ".."
 	})
@@ -261,7 +275,11 @@ func (CgroupCpuInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
 	}
 }
 
-func (c *CgroupNetworkInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
+func (KubernetesCgroupCpuInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
+
+}
+
+func (c *DockerCgroupNetworkInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
 	containerIds := listFilterDir("/sys/fs/cgroup/cpuacct/docker", func(info os.FileInfo) bool {
 		return info.IsDir() && info.Name() != "." && info.Name() != ".."
 	})
@@ -303,6 +321,9 @@ func (c *CgroupNetworkInstrument) MeasureAndReport(channel telem.TelemetryChanne
 	}
 }
 
+func (k KubernetesCgroupNetworkInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
+}
+
 func readBlkioTotal(path string) (val int64, err error) {
 	visitorErr := visitLines(path, func(line string) bool {
 		if strings.HasPrefix(line, "Total") {
@@ -319,7 +340,7 @@ func readBlkioTotal(path string) (val int64, err error) {
 	return
 }
 
-func (CgroupBlkioInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
+func (DockerCgroupBlkioInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
 	dirs := listFilterDir("/sys/fs/cgroup/blkio/docker", func(info os.FileInfo) bool {
 		return info.IsDir() && info.Name() != "." && info.Name() != ".."
 	})
@@ -335,7 +356,13 @@ func (CgroupBlkioInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
 	}
 }
 
-type defaultInstrumentFactory struct{}
+func (KubernetesCgroupBlkioInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
+
+}
+
+type defaultInstrumentFactory struct {
+	cgroupMode CgroupMode
+}
 
 func (d defaultInstrumentFactory) NewCpuFrequencyInstrument() Instrument {
 	return CpuScalingFrequencyInstrument{}
@@ -365,46 +392,79 @@ func (d defaultInstrumentFactory) NewDiskDataRateInstrument(devices []string) In
 	return &DiskDataRateInstrument{devices}
 }
 
-func (d defaultInstrumentFactory) NewCgroupCpuInstrument() Instrument {
-	return CgroupCpuInstrument{}
+func (d defaultInstrumentFactory) NewCgroupCpuInstrument(cgroupMode CgroupMode) Instrument {
+	if cgroupMode == Docker {
+		return DockerCgroupCpuInstrument{}
+	} else {
+		return KubernetesCgroupCpuInstrument{}
+	}
 }
 
-func (d defaultInstrumentFactory) NewCgroupBlkioInstrument() Instrument {
-	return CgroupBlkioInstrument{}
+func (d defaultInstrumentFactory) NewCgroupBlkioInstrument(cgroupMode CgroupMode) Instrument {
+	if cgroupMode == Docker {
+		return DockerCgroupBlkioInstrument{}
+	} else {
+		return KubernetesCgroupBlkioInstrument{}
+	}
+
 }
 
-func (d defaultInstrumentFactory) NewCgroupNetworkInstrument() Instrument {
+func (d defaultInstrumentFactory) NewCgroupNetworkInstrument(cgroupMode CgroupMode) Instrument {
+	if cgroupMode == Docker {
+		return NewDockerCgroupNetworkInstrument()
+	} else {
+		return NewKubernetesCgroupNetworkInstrument()
+	}
+
+}
+
+func NewKubernetesCgroupNetworkInstrument() Instrument {
+	return KubernetesCgroupNetworkInstrument{}
+}
+
+func NewDockerCgroupNetworkInstrument() Instrument {
 	pidMap, err := containerProcessIds()
 
 	if err != nil {
 		log.Println("unable to get process ids of containers", err)
 	}
 
-	return &CgroupNetworkInstrument{
+	return &DockerCgroupNetworkInstrument{
 		pids: pidMap,
 	}
 }
 
 type armInstrumentFactory struct {
 	defaultInstrumentFactory
+	cgroupMode CgroupMode
 }
 
 type x86InstrumentFactory struct {
 	defaultInstrumentFactory
+	cgroupMode CgroupMode
 }
 
-func NewInstrumentFactory(arch string) InstrumentFactory {
+type CgroupMode int
+
+const (
+	Docker CgroupMode = iota
+	Kubernetes
+	Unknown
+)
+
+func NewInstrumentFactory(arch string, cfg *Config) InstrumentFactory {
+	cgroupMode := cfg.Instruments.CgroupMode
 	switch arch {
 	case "amd64":
-		return x86InstrumentFactory{}
+		return x86InstrumentFactory{cgroupMode: cgroupMode}
 	case "arm":
 	case "arm64":
-		return armInstrumentFactory{}
+		return armInstrumentFactory{cgroupMode: cgroupMode}
 	default:
 		log.Printf("Unknown arch %s, returning default factory", arch)
 	}
 
-	return defaultInstrumentFactory{}
+	return defaultInstrumentFactory{cgroupMode: cgroupMode}
 }
 
 func check(err error) {
