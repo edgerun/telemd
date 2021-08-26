@@ -275,44 +275,50 @@ func readCgroupCpu(containerFolder string) (int64, error) {
 	return value, nil
 }
 
-func (KubernetesCgroupCpuInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
-	publishKubepodCpuValues := func(kubepodDir string) {
-		if _, err := os.Stat(kubepodDir); os.IsNotExist(err) {
-			return
-		}
-
-		getPods := func(dir string) []string {
-			return listFilterDir(dir, func(info os.FileInfo) bool {
-				return info.IsDir() && strings.Contains(info.Name(), "pod")
-			})
-		}
-
-		getContainers := func(podDir string) []string {
-			return listFilterDir(podDir, func(info os.FileInfo) bool {
-				return info.IsDir() && len(info.Name()) == 64
-			})
-		}
-
-		for _, pod := range getPods(kubepodDir) {
-			podDir := kubepodDir + "/" + pod
-			for _, containerId := range getContainers(podDir) {
-				value, err := readCgroupCpu(podDir + "/" + containerId)
-				if err == nil {
-					channel.Put(telem.NewTelemetry("kubernetes_cgrp_cpu/"+containerId, float64(value)))
-				} else {
-					log.Println("error reading data file", containerId, err)
-				}
-			}
-		}
+func fetchKubernetesContainerDirs(kubepodDir string) []string {
+	if _, err := os.Stat(kubepodDir); os.IsNotExist(err) {
+		return make([]string, 0)
 	}
 
-	rootDir := "/sys/fs/cgroup/cpuacct/kubepods"
-	bestEffortDir := rootDir + "/" + "besteffort"
-	burstableDir := rootDir + "/" + "burstable"
-	guaranteedDir := rootDir + "/" + "guaranteed"
+	getPods := func(dir string) []string {
+		return listFilterDir(dir, func(info os.FileInfo) bool {
+			return info.IsDir() && strings.Contains(info.Name(), "pod")
+		})
+	}
+
+	getContainers := func(podDir string) []string {
+		return listFilterDir(podDir, func(info os.FileInfo) bool {
+			return info.IsDir() && len(info.Name()) == 64
+		})
+	}
+
+	var containerDirs []string
+	for _, pod := range getPods(kubepodDir) {
+		podDir := kubepodDir + "/" + pod
+		for _, containerId := range getContainers(podDir) {
+			containerDir := podDir + "/" + containerId
+			containerDirs = append(containerDirs, containerDir)
+		}
+	}
+	return containerDirs
+}
+
+func (KubernetesCgroupCpuInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
+	var kubepodRootDir = "/sys/fs/cgroup/cpuacct/kubepods"
+	var bestEffortDir = kubepodRootDir + "/" + "besteffort"
+	var burstableDir = kubepodRootDir + "/" + "burstable"
+	var guaranteedDir = kubepodRootDir + "/" + "guaranteed"
 
 	for _, kubepodDir := range [3]string{bestEffortDir, burstableDir, guaranteedDir} {
-		publishKubepodCpuValues(kubepodDir)
+		for _, containerDir := range fetchKubernetesContainerDirs(kubepodDir) {
+			containerId := filepath.Base(containerDir)
+			value, err := readCgroupCpu(containerDir)
+			if err == nil {
+				channel.Put(telem.NewTelemetry("kubernetes_cgrp_cpu/"+containerId, float64(value)))
+			} else {
+				log.Println("error reading data file", containerId, err)
+			}
+		}
 	}
 }
 
@@ -380,18 +386,42 @@ func (DockerCgroupBlkioInstrument) MeasureAndReport(channel telem.TelemetryChann
 	})
 
 	for _, containerId := range dirs {
-		dataFile := "/sys/fs/cgroup/blkio/docker/" + containerId + "/blkio.throttle.io_service_bytes"
-		value, err := readBlkioTotal(dataFile)
+		containerDir := "/sys/fs/cgroup/blkio/docker/" + containerId
+		value, err := readCgroupBlkio(containerDir)
 		if err != nil {
-			log.Println("error reading data file", dataFile, err)
+			log.Println("error reading data file", containerDir, err)
 			continue
 		}
 		channel.Put(telem.NewTelemetry("docker_cgrp_blkio/"+containerId[:12], float64(value)))
 	}
 }
 
+func readCgroupBlkio(containerDir string) (int64, error) {
+	dataFile := containerDir + "/blkio.throttle.io_service_bytes"
+	value, err := readBlkioTotal(dataFile)
+	if err != nil {
+		return -1, err
+	}
+	return value, nil
+}
+
 func (KubernetesCgroupBlkioInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
-	channel.Put(telem.NewTelemetry("kubernetes_cgrp_blkio/"+"containerId", float64(-1)))
+	var kubepodRootDir = "/sys/fs/cgroup/blkio/kubepods"
+	var bestEffortDir = kubepodRootDir + "/" + "besteffort"
+	var burstableDir = kubepodRootDir + "/" + "burstable"
+	var guaranteedDir = kubepodRootDir + "/" + "guaranteed"
+
+	for _, kubepodDir := range [3]string{bestEffortDir, burstableDir, guaranteedDir} {
+		for _, containerDir := range fetchKubernetesContainerDirs(kubepodDir) {
+			containerId := filepath.Base(containerDir)
+			value, err := readCgroupBlkio(containerDir)
+			if err == nil {
+				channel.Put(telem.NewTelemetry("kubernetes_cgrp_blkio/"+containerId, float64(value)))
+			} else {
+				log.Println("error reading data file", containerId, err)
+			}
+		}
+	}
 }
 
 type defaultInstrumentFactory struct{}
