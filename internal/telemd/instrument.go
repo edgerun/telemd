@@ -27,6 +27,7 @@ type InstrumentFactory interface {
 	NewNetworkDataRateInstrument([]string) Instrument
 	NewDiskDataRateInstrument([]string) Instrument
 	NewDockerCgroupCpuInstrument() Instrument
+	NewKubernetesCgroupCpuInstrument() Instrument
 	NewDockerCgroupBlkioInstrument() Instrument
 	NewDockerCgroupNetworkInstrument() Instrument
 }
@@ -48,6 +49,8 @@ type DockerCgroupBlkioInstrument struct{}
 type DockerCgroupNetworkInstrument struct {
 	pids map[string]string
 }
+
+type KubernetesCgroupCpuInstrument struct{}
 
 func (CpuUtilInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
 	then := readCpuUtil()
@@ -261,6 +264,13 @@ func (DockerCgroupCpuInstrument) MeasureAndReport(channel telem.TelemetryChannel
 	}
 }
 
+func (KubernetesCgroupCpuInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
+	podId := "podId"
+	containerId := "containerId"
+	value := -1.
+	channel.Put(telem.NewTelemetry("kubernetes_cgrp_cpu/"+podId+"/"+containerId, value))
+}
+
 func (c *DockerCgroupNetworkInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
 	containerIds := listFilterDir("/sys/fs/cgroup/cpuacct/docker", func(info os.FileInfo) bool {
 		return info.IsDir() && info.Name() != "." && info.Name() != ".."
@@ -367,6 +377,10 @@ func (d defaultInstrumentFactory) NewDiskDataRateInstrument(devices []string) In
 
 func (d defaultInstrumentFactory) NewDockerCgroupCpuInstrument() Instrument {
 	return DockerCgroupCpuInstrument{}
+}
+
+func (d defaultInstrumentFactory) NewKubernetesCgroupCpuInstrument() Instrument {
+	return KubernetesCgroupCpuInstrument{}
 }
 
 func (d defaultInstrumentFactory) NewDockerCgroupBlkioInstrument() Instrument {
