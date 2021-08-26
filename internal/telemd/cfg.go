@@ -45,8 +45,16 @@ func NewDefaultConfig() *Config {
 	cfg.Redis.URL = "redis://localhost"
 	cfg.Redis.RetryBackoff = 5 * time.Second
 
-	cfg.Instruments.Net.Devices = networkDevices()
-	cfg.Instruments.Disk.Devices = blockDevices()
+	var err error
+	cfg.Instruments.Net.Devices, err = networkDevices()
+	if err != nil {
+		log.Println(err)
+	}
+
+	cfg.Instruments.Disk.Devices, err = blockDevices()
+	if err != nil {
+		log.Println(err)
+	}
 
 	cfg.Instruments.Periods = map[string]time.Duration{
 		"cpu":                   500 * time.Millisecond,
@@ -123,10 +131,10 @@ func (cfg *Config) LoadFromEnvironment(env env.Environment) {
 	}
 }
 
-func listFilterDir(dirname string, predicate func(info os.FileInfo) bool) []string {
+func listFilterDir(dirname string, predicate func(info os.FileInfo) bool) ([]string, error) {
 	dir, err := ioutil.ReadDir(dirname)
 	if err != nil {
-		panic(err)
+		return make([]string, 0), err
 	}
 
 	files := make([]string, 0)
@@ -137,16 +145,16 @@ func listFilterDir(dirname string, predicate func(info os.FileInfo) bool) []stri
 		}
 	}
 
-	return files
+	return files, nil
 }
 
-func networkDevices() []string {
+func networkDevices() ([]string, error) {
 	return listFilterDir("/sys/class/net", func(info os.FileInfo) bool {
 		return !info.IsDir() && info.Name() != "lo"
 	})
 }
 
-func blockDevices() []string {
+func blockDevices() ([]string, error) {
 	return listFilterDir("/sys/block", func(info os.FileInfo) bool {
 		return !info.IsDir() && !strings.HasPrefix(info.Name(), "loop")
 	})

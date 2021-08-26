@@ -53,8 +53,16 @@ func ReadSysInfo(info *NodeInfo) {
 		log.Println("error reading boot time info", err)
 	}
 
-	info.Disk = blockDevices()
-	info.Net = networkDevices()
+	var err error
+	info.Disk, err = blockDevices()
+	if err != nil {
+		log.Println("error getting block devices", err)
+	}
+
+	info.Net, err = networkDevices()
+	if err != nil {
+		log.Println("error getting network devices", err)
+	}
 
 	if hostname, err := os.Hostname(); err == nil {
 		info.Hostname = hostname

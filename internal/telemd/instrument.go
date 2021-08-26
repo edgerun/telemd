@@ -251,9 +251,14 @@ func (instr RamInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
 }
 
 func (DockerCgroupCpuInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
-	dirs := listFilterDir("/sys/fs/cgroup/cpuacct/docker", func(info os.FileInfo) bool {
+	dirs, err := listFilterDir("/sys/fs/cgroup/cpuacct/docker", func(info os.FileInfo) bool {
 		return info.IsDir() && info.Name() != "." && info.Name() != ".."
 	})
+
+	if err != nil {
+		log.Println("error reading docker cgroup cpu", err)
+		return
+	}
 
 	for _, containerId := range dirs {
 		containerFolder := "/sys/fs/cgroup/cpuacct/docker/" + containerId
@@ -281,15 +286,27 @@ func fetchKubernetesContainerDirs(kubepodDir string) []string {
 	}
 
 	getPods := func(dir string) []string {
-		return listFilterDir(dir, func(info os.FileInfo) bool {
+		pods, err := listFilterDir(dir, func(info os.FileInfo) bool {
 			return info.IsDir() && strings.Contains(info.Name(), "pod")
 		})
+
+		if err != nil {
+			log.Println("error getting pods", err)
+		}
+
+		return pods
 	}
 
 	getContainers := func(podDir string) []string {
-		return listFilterDir(podDir, func(info os.FileInfo) bool {
+		containers, err := listFilterDir(podDir, func(info os.FileInfo) bool {
 			return info.IsDir() && len(info.Name()) == 64
 		})
+
+		if err != nil {
+			log.Println("error getting containers", err)
+		}
+
+		return containers
 	}
 
 	var containerDirs []string
@@ -323,10 +340,14 @@ func (KubernetesCgroupCpuInstrument) MeasureAndReport(channel telem.TelemetryCha
 }
 
 func (c *DockerCgroupNetworkInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
-	containerIds := listFilterDir("/sys/fs/cgroup/cpuacct/docker", func(info os.FileInfo) bool {
+	containerIds, err := listFilterDir("/sys/fs/cgroup/cpuacct/docker", func(info os.FileInfo) bool {
 		return info.IsDir() && info.Name() != "." && info.Name() != ".."
 	})
 
+	if err != nil {
+		log.Println("error measuring docker cgroup net", err)
+		return
+	}
 	if len(containerIds) == 0 {
 		return
 	}
@@ -381,9 +402,14 @@ func readBlkioTotal(path string) (val int64, err error) {
 }
 
 func (DockerCgroupBlkioInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
-	dirs := listFilterDir("/sys/fs/cgroup/blkio/docker", func(info os.FileInfo) bool {
+	dirs, err := listFilterDir("/sys/fs/cgroup/blkio/docker", func(info os.FileInfo) bool {
 		return info.IsDir() && info.Name() != "." && info.Name() != ".."
 	})
+
+	if err != nil {
+		log.Println("error measuring docker cgroup blkio", err)
+		return
+	}
 
 	for _, containerId := range dirs {
 		containerDir := "/sys/fs/cgroup/blkio/docker/" + containerId
