@@ -254,21 +254,64 @@ func (DockerCgroupCpuInstrument) MeasureAndReport(channel telem.TelemetryChannel
 	})
 
 	for _, containerId := range dirs {
-		dataFile := "/sys/fs/cgroup/cpuacct/docker/" + containerId + "/cpuacct.usage"
-		value, err := readLineAndParseInt(dataFile)
-		if err != nil {
-			log.Println("error reading data file", dataFile, err)
-			continue
+		containerFolder := "/sys/fs/cgroup/cpuacct/docker/" + containerId
+		value, err := readCgroupCpu(containerFolder)
+		if err == nil {
+			channel.Put(telem.NewTelemetry("docker_cgrp_cpu/"+containerId[:12], float64(value)))
+		} else {
+			log.Println("error reading data file", containerFolder, err)
 		}
-		channel.Put(telem.NewTelemetry("docker_cgrp_cpu/"+containerId[:12], float64(value)))
 	}
 }
 
+func readCgroupCpu(containerFolder string) (int64, error) {
+	dataFile := containerFolder + "/cpuacct.usage"
+	value, err := readLineAndParseInt(dataFile)
+	if err != nil {
+		return -1, err
+	}
+	return value, nil
+}
+
 func (KubernetesCgroupCpuInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
-	podId := "podId"
-	containerId := "containerId"
-	value := -1.
-	channel.Put(telem.NewTelemetry("kubernetes_cgrp_cpu/"+podId+"/"+containerId, value))
+	publishKubepodCpuValues := func(kubepodDir string) {
+		if _, err := os.Stat(kubepodDir); os.IsNotExist(err) {
+			return
+		}
+
+		getPods := func(dir string) []string {
+			return listFilterDir(dir, func(info os.FileInfo) bool {
+				return info.IsDir() && strings.Contains(info.Name(), "pod")
+			})
+		}
+
+		getContainers := func(podDir string) []string {
+			return listFilterDir(podDir, func(info os.FileInfo) bool {
+				return info.IsDir() && len(info.Name()) == 64
+			})
+		}
+
+		for _, pod := range getPods(kubepodDir) {
+			podDir := kubepodDir + "/" + pod
+			for _, containerId := range getContainers(podDir) {
+				value, err := readCgroupCpu(podDir + "/" + containerId)
+				if err == nil {
+					channel.Put(telem.NewTelemetry("kubernetes_cgrp_cpu/"+containerId, float64(value)))
+				} else {
+					log.Println("error reading data file", containerId, err)
+				}
+			}
+		}
+	}
+
+	rootDir := "/sys/fs/cgroup/cpuacct/kubepods"
+	bestEffortDir := rootDir + "/" + "besteffort"
+	burstableDir := rootDir + "/" + "burstable"
+	guaranteedDir := rootDir + "/" + "guaranteed"
+
+	for _, kubepodDir := range [3]string{bestEffortDir, burstableDir, guaranteedDir} {
+		publishKubepodCpuValues(kubepodDir)
+	}
 }
 
 func (c *DockerCgroupNetworkInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
