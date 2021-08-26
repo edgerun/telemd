@@ -36,16 +36,16 @@ func (daemon *Daemon) initInstruments(factory InstrumentFactory) {
 	cfg := daemon.cfg
 
 	instruments := map[string]Instrument{
-		"cpu":        factory.NewCpuUtilInstrument(),
-		"freq":       factory.NewCpuFrequencyInstrument(),
-		"load":       factory.NewLoadInstrument(),
-		"procs":      factory.NewProcsInstrument(),
-		"ram":        factory.NewRamInstrument(),
-		"net":        factory.NewNetworkDataRateInstrument(cfg.Instruments.Net.Devices),
-		"disk":       factory.NewDiskDataRateInstrument(cfg.Instruments.Disk.Devices),
-		"cgrp_cpu":   factory.NewCgroupCpuInstrument(),
-		"cgrp_blkio": factory.NewCgroupBlkioInstrument(),
-		"cgrp_net":   factory.NewCgroupNetworkInstrument(),
+		"cpu":               factory.NewCpuUtilInstrument(),
+		"freq":              factory.NewCpuFrequencyInstrument(),
+		"load":              factory.NewLoadInstrument(),
+		"procs":             factory.NewProcsInstrument(),
+		"ram":               factory.NewRamInstrument(),
+		"net":               factory.NewNetworkDataRateInstrument(cfg.Instruments.Net.Devices),
+		"disk":              factory.NewDiskDataRateInstrument(cfg.Instruments.Disk.Devices),
+		"docker_cgrp_cpu":   factory.NewDockerCgroupCpuInstrument(),
+		"docker_cgrp_blkio": factory.NewDockerCgroupBlkioInstrument(),
+		"docker_cgrp_net":   factory.NewDockerCgroupNetworkInstrument(),
 	}
 
 	if cfg.Instruments.Disable != nil && (len(cfg.Instruments.Disable) > 0) {

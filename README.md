@@ -45,9 +45,9 @@ The default telemd runs the following instruments:
 * `net` Network I/O rate averaged in kilobytes/second
 * `load` the system load average of the last 1 and 5 minutes
 * `procs` the number of processes running at the current time
-* `cgrp_cpu` the cpu usage time of individual docker containers
-* `cgrp_blkio` the total block io usage in bytes for individual docker containers
-* `cgrp_net` the total network io usage in bytes for individual docker containers
+* `docker_cgrp_cpu` the cpu usage time of individual docker containers
+* `docker_cgrp_blkio` the total block io usage in bytes for individual docker containers
+* `docker_cgrp_net` the total network io usage in bytes for individual docker containers
 
 ### Info keys
 

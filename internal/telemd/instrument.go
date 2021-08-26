@@ -26,9 +26,9 @@ type InstrumentFactory interface {
 	NewRamInstrument() Instrument
 	NewNetworkDataRateInstrument([]string) Instrument
 	NewDiskDataRateInstrument([]string) Instrument
-	NewCgroupCpuInstrument() Instrument
-	NewCgroupBlkioInstrument() Instrument
-	NewCgroupNetworkInstrument() Instrument
+	NewDockerCgroupCpuInstrument() Instrument
+	NewDockerCgroupBlkioInstrument() Instrument
+	NewDockerCgroupNetworkInstrument() Instrument
 }
 
 type CpuInfoFrequencyInstrument struct{}
@@ -43,9 +43,9 @@ type NetworkDataRateInstrument struct {
 type DiskDataRateInstrument struct {
 	Devices []string
 }
-type CgroupCpuInstrument struct{}
-type CgroupBlkioInstrument struct{}
-type CgroupNetworkInstrument struct {
+type DockerCgroupCpuInstrument struct{}
+type DockerCgroupBlkioInstrument struct{}
+type DockerCgroupNetworkInstrument struct {
 	pids map[string]string
 }
 
@@ -245,7 +245,7 @@ func (instr RamInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
 	channel.Put(telem.NewTelemetry("ram", float64(total-free)))
 }
 
-func (CgroupCpuInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
+func (DockerCgroupCpuInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
 	dirs := listFilterDir("/sys/fs/cgroup/cpuacct/docker", func(info os.FileInfo) bool {
 		return info.IsDir() && info.Name() != "." && info.Name() != ".."
 	})
@@ -257,11 +257,11 @@ func (CgroupCpuInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
 			log.Println("error reading data file", dataFile, err)
 			continue
 		}
-		channel.Put(telem.NewTelemetry("cgrp_cpu/"+containerId[:12], float64(value)))
+		channel.Put(telem.NewTelemetry("docker_cgrp_cpu/"+containerId[:12], float64(value)))
 	}
 }
 
-func (c *CgroupNetworkInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
+func (c *DockerCgroupNetworkInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
 	containerIds := listFilterDir("/sys/fs/cgroup/cpuacct/docker", func(info os.FileInfo) bool {
 		return info.IsDir() && info.Name() != "." && info.Name() != ".."
 	})
@@ -299,7 +299,7 @@ func (c *CgroupNetworkInstrument) MeasureAndReport(channel telem.TelemetryChanne
 			continue
 		}
 
-		channel.Put(telem.NewTelemetry("cgrp_net/"+containerId[:12], float64(rx+tx)))
+		channel.Put(telem.NewTelemetry("docker_cgrp_net/"+containerId[:12], float64(rx+tx)))
 	}
 }
 
@@ -319,7 +319,7 @@ func readBlkioTotal(path string) (val int64, err error) {
 	return
 }
 
-func (CgroupBlkioInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
+func (DockerCgroupBlkioInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
 	dirs := listFilterDir("/sys/fs/cgroup/blkio/docker", func(info os.FileInfo) bool {
 		return info.IsDir() && info.Name() != "." && info.Name() != ".."
 	})
@@ -331,7 +331,7 @@ func (CgroupBlkioInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
 			log.Println("error reading data file", dataFile, err)
 			continue
 		}
-		channel.Put(telem.NewTelemetry("cgrp_blkio/"+containerId[:12], float64(value)))
+		channel.Put(telem.NewTelemetry("docker_cgrp_blkio/"+containerId[:12], float64(value)))
 	}
 }
 
@@ -365,22 +365,22 @@ func (d defaultInstrumentFactory) NewDiskDataRateInstrument(devices []string) In
 	return &DiskDataRateInstrument{devices}
 }
 
-func (d defaultInstrumentFactory) NewCgroupCpuInstrument() Instrument {
-	return CgroupCpuInstrument{}
+func (d defaultInstrumentFactory) NewDockerCgroupCpuInstrument() Instrument {
+	return DockerCgroupCpuInstrument{}
 }
 
-func (d defaultInstrumentFactory) NewCgroupBlkioInstrument() Instrument {
-	return CgroupBlkioInstrument{}
+func (d defaultInstrumentFactory) NewDockerCgroupBlkioInstrument() Instrument {
+	return DockerCgroupBlkioInstrument{}
 }
 
-func (d defaultInstrumentFactory) NewCgroupNetworkInstrument() Instrument {
+func (d defaultInstrumentFactory) NewDockerCgroupNetworkInstrument() Instrument {
 	pidMap, err := containerProcessIds()
 
 	if err != nil {
 		log.Println("unable to get process ids of containers", err)
 	}
 
-	return &CgroupNetworkInstrument{
+	return &DockerCgroupNetworkInstrument{
 		pids: pidMap,
 	}
 }
