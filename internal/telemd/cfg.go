@@ -49,17 +49,18 @@ func NewDefaultConfig() *Config {
 	cfg.Instruments.Disk.Devices = blockDevices()
 
 	cfg.Instruments.Periods = map[string]time.Duration{
-		"cpu":                 500 * time.Millisecond,
-		"freq":                500 * time.Millisecond,
-		"procs":               500 * time.Millisecond,
-		"ram":                 1 * time.Second,
-		"load":                5 * time.Second,
-		"net":                 500 * time.Millisecond,
-		"disk":                500 * time.Millisecond,
-		"docker_cgrp_cpu":     1 * time.Second,
-		"docker_cgrp_blkio":   1 * time.Second,
-		"docker_cgrp_net":     1 * time.Second,
-		"kubernetes_cgrp_cpu": 1 * time.Second,
+		"cpu":                   500 * time.Millisecond,
+		"freq":                  500 * time.Millisecond,
+		"procs":                 500 * time.Millisecond,
+		"ram":                   1 * time.Second,
+		"load":                  5 * time.Second,
+		"net":                   500 * time.Millisecond,
+		"disk":                  500 * time.Millisecond,
+		"docker_cgrp_cpu":       1 * time.Second,
+		"docker_cgrp_blkio":     1 * time.Second,
+		"docker_cgrp_net":       1 * time.Second,
+		"kubernetes_cgrp_cpu":   1 * time.Second,
+		"kubernetes_cgrp_blkio": 1 * time.Second,
 	}
 
 	return cfg

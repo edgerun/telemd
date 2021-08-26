@@ -30,6 +30,7 @@ type InstrumentFactory interface {
 	NewKubernetesCgroupCpuInstrument() Instrument
 	NewDockerCgroupBlkioInstrument() Instrument
 	NewDockerCgroupNetworkInstrument() Instrument
+	NewKubernetesCgroupBlkioInstrument() Instrument
 }
 
 type CpuInfoFrequencyInstrument struct{}
@@ -51,6 +52,7 @@ type DockerCgroupNetworkInstrument struct {
 }
 
 type KubernetesCgroupCpuInstrument struct{}
+type KubernetesCgroupBlkioInstrument struct{}
 
 func (CpuUtilInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
 	then := readCpuUtil()
@@ -388,6 +390,10 @@ func (DockerCgroupBlkioInstrument) MeasureAndReport(channel telem.TelemetryChann
 	}
 }
 
+func (KubernetesCgroupBlkioInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
+	channel.Put(telem.NewTelemetry("kubernetes_cgrp_blkio/"+"containerId", float64(-1)))
+}
+
 type defaultInstrumentFactory struct{}
 
 func (d defaultInstrumentFactory) NewCpuFrequencyInstrument() Instrument {
@@ -440,6 +446,10 @@ func (d defaultInstrumentFactory) NewDockerCgroupNetworkInstrument() Instrument 
 	return &DockerCgroupNetworkInstrument{
 		pids: pidMap,
 	}
+}
+
+func (d defaultInstrumentFactory) NewKubernetesCgroupBlkioInstrument() Instrument {
+	return KubernetesCgroupBlkioInstrument{}
 }
 
 type armInstrumentFactory struct {
