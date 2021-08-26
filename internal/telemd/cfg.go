@@ -1,7 +1,6 @@
 package telemd
 
 import (
-	"errors"
 	"fmt"
 	"github.com/edgerun/telemd/internal/env"
 	"io/ioutil"
@@ -31,7 +30,6 @@ type Config struct {
 		Disk struct {
 			Devices []string
 		}
-		CgroupMode CgroupMode
 	}
 }
 
@@ -62,8 +60,6 @@ func NewDefaultConfig() *Config {
 		"cgrp_blkio": 1 * time.Second,
 		"cgrp_net":   1 * time.Second,
 	}
-
-	cfg.Instruments.CgroupMode = Docker
 
 	return cfg
 }
@@ -122,28 +118,6 @@ func (cfg *Config) LoadFromEnvironment(env env.Environment) {
 		cfg.Instruments.Disable = fields
 	} else if err != nil {
 		log.Fatal("Error reading telemd_instruments_disable", err)
-	}
-
-	if rawCgroupMode, ok := env.Lookup("telemd_instruments_cgroup_mode"); ok {
-		cgroupMode, err := parseCgroupMode(rawCgroupMode)
-		if err != nil {
-			log.Fatal("Error reading telemd_instruments_cgroup_mode", err)
-		}
-		cfg.Instruments.CgroupMode = cgroupMode
-	} else {
-		cfg.Instruments.CgroupMode = Docker
-	}
-
-}
-
-func parseCgroupMode(mode string) (CgroupMode, error) {
-	switch strings.ToLower(mode) {
-	case "docker":
-		return Docker, nil
-	case "kubernetes":
-		return Kubernetes, nil
-	default:
-		return Unknown, errors.New(fmt.Sprintf("Unknown cgroup mode: %s", mode))
 	}
 }
 

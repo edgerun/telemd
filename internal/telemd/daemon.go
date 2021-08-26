@@ -26,7 +26,7 @@ func NewDaemon(cfg *Config) *Daemon {
 		tickers:   make(map[string]TelemetryTicker),
 	}
 
-	td.initInstruments(NewInstrumentFactory(runtime.GOARCH, cfg))
+	td.initInstruments(NewInstrumentFactory(runtime.GOARCH))
 	td.initTickers()
 
 	return td
@@ -43,9 +43,9 @@ func (daemon *Daemon) initInstruments(factory InstrumentFactory) {
 		"ram":        factory.NewRamInstrument(),
 		"net":        factory.NewNetworkDataRateInstrument(cfg.Instruments.Net.Devices),
 		"disk":       factory.NewDiskDataRateInstrument(cfg.Instruments.Disk.Devices),
-		"cgrp_cpu":   factory.NewCgroupCpuInstrument(cfg.Instruments.CgroupMode),
-		"cgrp_blkio": factory.NewCgroupBlkioInstrument(cfg.Instruments.CgroupMode),
-		"cgrp_net":   factory.NewCgroupNetworkInstrument(cfg.Instruments.CgroupMode),
+		"cgrp_cpu":   factory.NewCgroupCpuInstrument(),
+		"cgrp_blkio": factory.NewCgroupBlkioInstrument(),
+		"cgrp_net":   factory.NewCgroupNetworkInstrument(),
 	}
 
 	if cfg.Instruments.Disable != nil && (len(cfg.Instruments.Disable) > 0) {
