@@ -31,6 +31,7 @@ type InstrumentFactory interface {
 	NewDockerCgroupBlkioInstrument() Instrument
 	NewDockerCgroupNetworkInstrument() Instrument
 	NewKubernetesCgroupBlkioInstrument() Instrument
+	NewKubernetesCgroupMemoryInstrument() Instrument
 }
 
 type CpuInfoFrequencyInstrument struct{}
@@ -53,6 +54,7 @@ type DockerCgroupNetworkInstrument struct {
 
 type KubernetesCgroupCpuInstrument struct{}
 type KubernetesCgroupBlkioInstrument struct{}
+type KuberenetesCgroupMemoryInstrument struct{}
 
 func (CpuUtilInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
 	then := readCpuUtil()
@@ -450,6 +452,45 @@ func (KubernetesCgroupBlkioInstrument) MeasureAndReport(channel telem.TelemetryC
 	}
 }
 
+func readMemory(path string) (val int64, err error) {
+	visitorErr := visitLines(path, func(line string) bool {
+		val, err = strconv.ParseInt(line, 10, 64)
+		return true
+	})
+	if visitorErr != nil {
+		return val, visitorErr
+	}
+	return
+}
+
+func readCgroupMemory(containerDir string) (int64, error) {
+	dataFile := containerDir + "/memory.usage_in_bytes"
+	value, err := readMemory(dataFile)
+	if err != nil {
+		return -1, err
+	}
+	return value, nil
+}
+
+func (k KuberenetesCgroupMemoryInstrument) MeasureAndReport(ch telem.TelemetryChannel) {
+	var kubepodRootDir = "/sys/fs/cgroup/memory/kubepods"
+	var bestEffortDir = kubepodRootDir + "/" + "besteffort"
+	var burstableDir = kubepodRootDir + "/" + "burstable"
+	var guaranteedDir = kubepodRootDir + "/" + "guaranteed"
+
+	for _, kubePodDir := range [3]string{bestEffortDir, burstableDir, guaranteedDir} {
+		for _, containerDir := range fetchKubernetesContainerDirs(kubePodDir) {
+			containerId := filepath.Base("containerDir")
+			value, err := readCgroupMemory(containerDir)
+			if err == nil {
+				ch.Put(telem.NewTelemetry("kubernetes_cgrp_memory/"+containerId, float64(value)))
+			} else {
+				log.Println("error reading data file", containerId, err)
+			}
+		}
+	}
+}
+
 type defaultInstrumentFactory struct{}
 
 func (d defaultInstrumentFactory) NewCpuFrequencyInstrument() Instrument {
@@ -506,6 +547,10 @@ func (d defaultInstrumentFactory) NewDockerCgroupNetworkInstrument() Instrument 
 
 func (d defaultInstrumentFactory) NewKubernetesCgroupBlkioInstrument() Instrument {
 	return KubernetesCgroupBlkioInstrument{}
+}
+
+func (d defaultInstrumentFactory) NewKubernetesCgroupMemoryInstrument() Instrument {
+	return KuberenetesCgroupMemoryInstrument{}
 }
 
 type armInstrumentFactory struct {
