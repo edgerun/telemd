@@ -480,7 +480,7 @@ func (k KuberenetesCgroupMemoryInstrument) MeasureAndReport(ch telem.TelemetryCh
 
 	for _, kubePodDir := range [3]string{bestEffortDir, burstableDir, guaranteedDir} {
 		for _, containerDir := range fetchKubernetesContainerDirs(kubePodDir) {
-			containerId := filepath.Base("containerDir")
+			containerId := filepath.Base(containerDir)
 			value, err := readCgroupMemory(containerDir)
 			if err == nil {
 				ch.Put(telem.NewTelemetry("kubernetes_cgrp_memory/"+containerId, float64(value)))
