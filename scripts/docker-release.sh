@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-image=jjnp/telemd
+image=edgerun/telemd
 
 if [[ $1 ]]; then
 	version="$1"
