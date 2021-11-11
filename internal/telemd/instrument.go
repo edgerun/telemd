@@ -329,15 +329,24 @@ func (KubernetesCgroupCpuInstrument) MeasureAndReport(channel telem.TelemetryCha
 	var guaranteedDir = kubepodRootDir + "/" + "guaranteed"
 
 	for _, kubepodDir := range [3]string{bestEffortDir, burstableDir, guaranteedDir} {
-		for _, containerDir := range fetchKubernetesContainerDirs(kubepodDir) {
-			containerId := filepath.Base(containerDir)
-			value, err := readCgroupCpu(containerDir)
-			if err == nil {
-				channel.Put(telem.NewTelemetry("kubernetes_cgrp_cpu/"+containerId, float64(value)))
-			} else {
-				log.Println("error reading data file", containerId, err)
+		log.Println(kubepodDir)
+		go func(kubepodDir string) {
+			for _, containerDir := range fetchKubernetesContainerDirs(kubepodDir) {
+				go func(containerDir string) {
+					containerId := filepath.Base(containerDir)
+					log.Println(containerId)
+					value, err := readCgroupCpu(containerDir)
+					if err == nil {
+						log.Println(value)
+						channel.Put(telem.NewTelemetry("kubernetes_cgrp_cpu/"+containerId, float64(value)))
+					} else {
+						log.Println("error reading data file", containerId, err)
+					}
+				}(containerDir)
+
 			}
-		}
+		}(kubepodDir)
+
 	}
 }
 
