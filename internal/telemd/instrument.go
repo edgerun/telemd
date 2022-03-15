@@ -32,6 +32,9 @@ type InstrumentFactory interface {
 	NewDockerCgroupNetworkInstrument() Instrument
 	NewKubernetesCgroupBlkioInstrument() Instrument
 	NewKubernetesCgroupMemoryInstrument() Instrument
+	NewPsiCpuInstrument() Instrument
+	NewPsiMemoryInstrument() Instrument
+	NewPsiIoInstrument() Instrument
 }
 
 type CpuInfoFrequencyInstrument struct{}
@@ -40,6 +43,9 @@ type CpuUtilInstrument struct{}
 type LoadInstrument struct{}
 type ProcsInstrument struct{}
 type RamInstrument struct{}
+type PsiCpuInstrument struct{}
+type PsiMemoryInstrument struct{}
+type PsiIoInstrument struct{}
 type NetworkDataRateInstrument struct {
 	Devices []string
 }
@@ -250,6 +256,36 @@ func (instr RamInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
 	}
 
 	channel.Put(telem.NewTelemetry("ram", float64(total-free)))
+}
+
+func (PsiCpuInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
+	result, err := readPsiResult("cpu")
+	if err == nil {
+		channel.Put(telem.NewTelemetry("psi_cpu/some", result.Some.Total))
+		if result.Full != nil {
+			channel.Put(telem.NewTelemetry("psi_cpu/full", result.Full.Total))
+		}
+	}
+}
+
+func (PsiMemoryInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
+	result, err := readPsiResult("memory")
+	if err == nil {
+		channel.Put(telem.NewTelemetry("psi_memory/some", result.Some.Total))
+		if result.Full != nil {
+			channel.Put(telem.NewTelemetry("psi_memory/full", result.Full.Total))
+		}
+	}
+}
+
+func (PsiIoInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
+	result, err := readPsiResult("io")
+	if err == nil {
+		channel.Put(telem.NewTelemetry("psi_io/some", result.Some.Total))
+		if result.Full != nil {
+			channel.Put(telem.NewTelemetry("psi_io/full", result.Full.Total))
+		}
+	}
 }
 
 func (DockerCgroupCpuInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
@@ -528,6 +564,18 @@ func (d defaultInstrumentFactory) NewNetworkDataRateInstrument(devices []string)
 
 func (d defaultInstrumentFactory) NewDiskDataRateInstrument(devices []string) Instrument {
 	return &DiskDataRateInstrument{devices}
+}
+
+func (d defaultInstrumentFactory) NewPsiCpuInstrument() Instrument {
+	return PsiCpuInstrument{}
+}
+
+func (d defaultInstrumentFactory) NewPsiMemoryInstrument() Instrument {
+	return PsiMemoryInstrument{}
+}
+
+func (d defaultInstrumentFactory) NewPsiIoInstrument() Instrument {
+	return PsiIoInstrument{}
 }
 
 func (d defaultInstrumentFactory) NewDockerCgroupCpuInstrument() Instrument {

@@ -80,6 +80,64 @@ func readMeminfo() map[string]string {
 	return vals
 }
 
+type PsiMeasure struct {
+	Avg10  float64
+	Avg60  float64
+	Avg300 float64
+	Total  float64
+}
+type PsiResult struct {
+	Some *PsiMeasure
+	Full *PsiMeasure
+}
+
+func readPsiMeasure(line string) *PsiMeasure {
+	//0: identifier (some/fulll), 1: avg10, 2: avg60, 3: avg300, 4: total
+	fields := strings.Fields(line)
+
+	parse := func(part string) float64 {
+		kbstr := strings.Split(part, "=")
+		value := kbstr[1]
+		parsed, _ := strconv.ParseFloat(value, 64)
+		return parsed
+	}
+
+	avg10 := parse(fields[1])
+	avg60 := parse(fields[2])
+	avg300 := parse(fields[3])
+	total := parse(fields[4])
+
+	return &PsiMeasure{
+		Avg10:  avg10,
+		Avg60:  avg60,
+		Avg300: avg300,
+		Total:  total,
+	}
+}
+
+func readPsiResult(resource string) (*PsiResult, error) {
+	path := "/proc/pressure/" + resource
+
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	var fullMeasure *PsiMeasure = nil
+
+	scanner.Scan() // some should always exist
+	someMeasure := readPsiMeasure(scanner.Text())
+
+	// check if full is in the file
+	if scanner.Scan() {
+		fullMeasure = readPsiMeasure(scanner.Text())
+	}
+
+	return &PsiResult{Some: someMeasure, Full: fullMeasure}, nil
+}
+
 func readMemTotal() (int64, error) {
 	val, ok := readMeminfo()["MemTotal"]
 	if !ok {
