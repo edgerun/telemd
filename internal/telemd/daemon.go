@@ -54,6 +54,16 @@ func (daemon *Daemon) initInstruments(factory InstrumentFactory) {
 		"kubernetes_cgrp_memory": factory.NewKubernetesCgroupMemoryInstrument(),
 	}
 
+	activeNetDevice, err := findActiveNetDevice()
+	if err == nil {
+		wirelessPath := "/sys/class/net/" + activeNetDevice + "/wireless"
+		if fileDirExists(wirelessPath) {
+			instruments["tx_bitrate"] = factory.NewWifiTxBitrateInstrument(activeNetDevice)
+			instruments["rx_bitrate"] = factory.NewWifiRxBitrateInstrument(activeNetDevice)
+			instruments["signal"] = factory.NewWifiSignalInstrument(activeNetDevice)
+		}
+	}
+
 	if cfg.Instruments.Disable != nil && (len(cfg.Instruments.Disable) > 0) {
 		log.Println("disabling instruments", cfg.Instruments.Disable)
 		for _, instr := range cfg.Instruments.Disable {

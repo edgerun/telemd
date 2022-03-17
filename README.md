@@ -51,6 +51,9 @@ The default telemd runs the following instruments:
 * `net` Network I/O rate averaged in kilobytes/second
 * `load` the system load average of the last 1 and 5 minutes
 * `procs` the number of processes running at the current time
+* `tx_bitrate` the tx bitrate reported by `iw`. Only available for wireless interfaces
+* `rx_bitrate` the rx bitrate reported by `iw`. Only available for wireless interfaces
+* `signal` the signal strength reported by `iw`. Only available for wireless interfaces
 * `psi_cpu` host's CPU [pressure](https://www.kernel.org/doc/html/latest/accounting/psi.html#psi)
 * `psi_cpu` host's I/O [pressure](https://www.kernel.org/doc/html/latest/accounting/psi.html#psi)
 * `psi_cpu` host's memory [pressure](https://www.kernel.org/doc/html/latest/accounting/psi.html#psi)

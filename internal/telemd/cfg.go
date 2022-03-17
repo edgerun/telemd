@@ -67,6 +67,9 @@ func NewDefaultConfig() *Config {
 		"psi_cpu":                500 * time.Millisecond,
 		"psi_io":                 500 * time.Millisecond,
 		"psi_memory":             500 * time.Millisecond,
+		"tx_bitrate":             1 * time.Second,
+		"rx_bitrate":             1 * time.Second,
+		"signal":                 1 * time.Second,
 		"docker_cgrp_cpu":        1 * time.Second,
 		"docker_cgrp_blkio":      1 * time.Second,
 		"docker_cgrp_net":        1 * time.Second,
@@ -184,8 +187,7 @@ func findActiveNetDevice() (string, error) {
 }
 
 func findWifiSpeed(device string) (string, error) {
-	args := "iw dev " + device + " link | awk -F '[ ]' '/tx bitrate:/{print $3}'"
-	speed, err := execCommand(args)
+	speed, err := parseIw(device, "tx bitrate", 3)
 	if err != nil {
 		return speed, err
 	}
