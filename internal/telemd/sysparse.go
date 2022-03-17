@@ -115,6 +115,15 @@ func readPsiMeasure(line string) *PsiMeasure {
 	}
 }
 
+func parseIw(device string, attribute string, index int) (string, error) {
+	args := "iw dev " + device + " link | awk -F '[ ]' '/" + attribute + ":/{print $" + strconv.Itoa(index) + "}'"
+	result, err := execCommand(args)
+	if err != nil {
+		return result, err
+	}
+	return result, nil
+}
+
 func readPsiResult(resource string) (*PsiResult, error) {
 	path := "/proc/pressure/" + resource
 

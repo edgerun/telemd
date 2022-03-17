@@ -35,6 +35,9 @@ type InstrumentFactory interface {
 	NewPsiCpuInstrument() Instrument
 	NewPsiMemoryInstrument() Instrument
 	NewPsiIoInstrument() Instrument
+	NewWifiTxBitrateInstrument(string) Instrument
+	NewWifiRxBitrateInstrument(string) Instrument
+	NewWifiSignalInstrument(string) Instrument
 }
 
 type CpuInfoFrequencyInstrument struct{}
@@ -46,6 +49,15 @@ type RamInstrument struct{}
 type PsiCpuInstrument struct{}
 type PsiMemoryInstrument struct{}
 type PsiIoInstrument struct{}
+type WifiRxBitrateInstrument struct {
+	Device string
+}
+type WifiTxBitrateInstrument struct {
+	Device string
+}
+type WifiSignalInstrument struct {
+	Device string
+}
 type NetworkDataRateInstrument struct {
 	Devices []string
 }
@@ -284,6 +296,36 @@ func (PsiIoInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
 		channel.Put(telem.NewTelemetry("psi_io/some", result.Some.Total))
 		if result.Full != nil {
 			channel.Put(telem.NewTelemetry("psi_io/full", result.Full.Total))
+		}
+	}
+}
+
+func (i WifiTxBitrateInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
+	bitrate, err := parseIw(i.Device, "tx bitrate", 3)
+	if err == nil {
+		value, err := strconv.ParseFloat(bitrate, 64)
+		if err == nil {
+			channel.Put(telem.NewTelemetry("tx_bitrate"+telem.TopicSeparator+i.Device, value))
+		}
+	}
+}
+
+func (i WifiRxBitrateInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
+	bitrate, err := parseIw(i.Device, "rx bitrate", 3)
+	if err == nil {
+		value, err := strconv.ParseFloat(bitrate, 64)
+		if err == nil {
+			channel.Put(telem.NewTelemetry("rx_bitrate"+telem.TopicSeparator+i.Device, value))
+		}
+	}
+}
+
+func (i WifiSignalInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
+	bitrate, err := parseIw(i.Device, "signal", 2)
+	if err == nil {
+		value, err := strconv.ParseFloat(bitrate, 64)
+		if err == nil {
+			channel.Put(telem.NewTelemetry("signal"+telem.TopicSeparator+i.Device, value))
 		}
 	}
 }
@@ -573,6 +615,18 @@ func (d defaultInstrumentFactory) NewNetworkDataRateInstrument(devices []string)
 
 func (d defaultInstrumentFactory) NewDiskDataRateInstrument(devices []string) Instrument {
 	return &DiskDataRateInstrument{devices}
+}
+
+func (d defaultInstrumentFactory) NewWifiTxBitrateInstrument(device string) Instrument {
+	return &WifiTxBitrateInstrument{device}
+}
+
+func (d defaultInstrumentFactory) NewWifiRxBitrateInstrument(device string) Instrument {
+	return &WifiRxBitrateInstrument{device}
+}
+
+func (d defaultInstrumentFactory) NewWifiSignalInstrument(device string) Instrument {
+	return &WifiSignalInstrument{device}
 }
 
 func (d defaultInstrumentFactory) NewPsiCpuInstrument() Instrument {
