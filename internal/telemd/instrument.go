@@ -30,6 +30,7 @@ type InstrumentFactory interface {
 	NewKubernetesCgroupCpuInstrument() Instrument
 	NewDockerCgroupBlkioInstrument() Instrument
 	NewDockerCgroupNetworkInstrument() Instrument
+	NewDockerCgroupMemoryInstrument() Instrument
 	NewKubernetesCgroupBlkioInstrument() Instrument
 	NewKubernetesCgroupMemoryInstrument() Instrument
 	NewPsiCpuInstrument() Instrument
@@ -74,6 +75,7 @@ type DockerCgroupv1NetworkInstrument struct {
 type DockerCgroupv2NetworkInstrument struct {
 	pids map[string]string
 }
+type DockerCgroupv2MemoryInstrument struct{}
 
 type KubernetesCgroupCpuInstrument struct{}
 type KubernetesCgroupBlkioInstrument struct{}
@@ -697,6 +699,30 @@ func (DockerCgroupv2BlkioInstrument) MeasureAndReport(channel telem.TelemetryCha
 	}
 }
 
+func (k DockerCgroupv2MemoryInstrument) MeasureAndReport(ch telem.TelemetryChannel) {
+	dirname := "/sys/fs/cgroup/system.slice"
+	prefix := "docker-"
+
+	err, dirs := listCgroupv2Folders(prefix)
+	if err != nil {
+		log.Println("error measuring docker cgroup blkio", err)
+		return
+	}
+
+	for _, containerIdFolder := range dirs {
+		index := len(prefix)
+		// 12 is the length of the short-form for container IDs
+		containerId := containerIdFolder[index : index+12]
+		containerFolder := dirname + "/" + containerIdFolder
+		value, err := readCgroupv2Memory(containerFolder)
+		if err == nil {
+			ch.Put(telem.NewTelemetry("docker_cgrp_memory/"+containerId, float64(value)))
+		} else {
+			log.Println("error reading data file", containerId, err)
+		}
+	}
+}
+
 func (KubernetesCgroupBlkioInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
 	var kubepodRootDir = "/sys/fs/cgroup/blkio/kubepods"
 	var bestEffortDir = kubepodRootDir + "/" + "besteffort"
@@ -739,6 +765,15 @@ func readMemory(path string) (val int64, err error) {
 func readCgroupMemory(containerDir string) (int64, error) {
 	dataFile := containerDir + "/memory.stat"
 	value, err := readMemory(dataFile)
+	if err != nil {
+		return -1, err
+	}
+	return value, nil
+}
+
+func readCgroupv2Memory(containerDir string) (int64, error) {
+	dataFile := containerDir + "/memory.current"
+	value, err := readLineAndParseInt(dataFile)
 	if err != nil {
 		return -1, err
 	}
@@ -875,6 +910,10 @@ func (d defaultInstrumentFactory) NewKubernetesCgroupBlkioInstrument() Instrumen
 
 func (d defaultInstrumentFactory) NewKubernetesCgroupMemoryInstrument() Instrument {
 	return KuberenetesCgroupMemoryInstrument{}
+}
+
+func (d defaultInstrumentFactory) NewDockerCgroupMemoryInstrument() Instrument {
+	return DockerCgroupv2MemoryInstrument{}
 }
 
 type armInstrumentFactory struct {
