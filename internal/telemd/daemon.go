@@ -49,6 +49,7 @@ func (daemon *Daemon) initInstruments(factory InstrumentFactory) {
 		"docker_cgrp_cpu":        factory.NewDockerCgroupCpuInstrument(),
 		"docker_cgrp_blkio":      factory.NewDockerCgroupBlkioInstrument(),
 		"docker_cgrp_net":        factory.NewDockerCgroupNetworkInstrument(),
+		"docker_cgrp_memory":     factory.NewDockerCgroupMemoryInstrument(),
 		"kubernetes_cgrp_cpu":    factory.NewKubernetesCgroupCpuInstrument(),
 		"kubernetes_cgrp_blkio":  factory.NewKubernetesCgroupBlkioInstrument(),
 		"kubernetes_cgrp_memory": factory.NewKubernetesCgroupMemoryInstrument(),

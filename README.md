@@ -60,6 +60,7 @@ The default telemd runs the following instruments:
 * `docker_cgrp_cpu` the cpu usage time of individual docker containers
 * `docker_cgrp_blkio` the total block io usage in bytes for individual docker containers
 * `docker_cgrp_net` the total network io usage in bytes for individual docker containers
+* `docker_cgrp_memory` the total memory (RAM) usage in bytes for individual docker containers
 * `kubernetes_cgrp_cpu` the cpu usage time of individual Kubernetes Pod containers
 * `kubernetes_cgrp_blkio` the total block io usage in bytes for individual Kubernetes Pod containers
 * `kubernetes_cgrp_memory` the total memory (RAM) usage in bytes for individual Kubernetes Pod containers
