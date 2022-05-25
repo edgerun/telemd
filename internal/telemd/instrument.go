@@ -66,7 +66,8 @@ type DiskDataRateInstrument struct {
 }
 type DockerCgroupv1CpuInstrument struct{}
 type DockerCgroupv2CpuInstrument struct{}
-type DockerCgroupBlkioInstrument struct{}
+type DockerCgroupv1BlkioInstrument struct{}
+type DockerCgroupv2BlkioInstrument struct{}
 type DockerCgroupNetworkInstrument struct {
 	pids map[string]string
 }
@@ -540,7 +541,7 @@ func readBlkioTotal(path string) (val int64, err error) {
 	return
 }
 
-func (DockerCgroupBlkioInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
+func (DockerCgroupv1BlkioInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
 	dirs, err := listFilterDir("/sys/fs/cgroup/blkio/docker", func(info os.FileInfo) bool {
 		return info.IsDir() && info.Name() != "." && info.Name() != ".."
 	})
@@ -568,6 +569,80 @@ func readCgroupBlkio(containerDir string) (int64, error) {
 		return -1, err
 	}
 	return value, nil
+}
+
+func readIoStat(path string) (int64, int64, error) {
+	// contains multiple lines
+	// each line looks similar to:
+	// 259:0 rbytes=10113024 wbytes=0 rios=149 wios=0 dbytes=0 dios=0
+	// each rbytes and wbytes must be summed up
+
+	file, err := os.Open(path)
+	if err != nil {
+		return -1, -1, err
+	}
+	defer file.Close()
+
+	readBytes := int64(0)
+	writeBytes := int64(0)
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		rawReadBytes := strings.Split(line, " ")[1]
+		rawReadBytes = strings.Split(rawReadBytes, "=")[1]
+
+		rawWriteBytes := strings.Split(line, " ")[2]
+		rawWriteBytes = strings.Split(rawWriteBytes, "=")[1]
+
+		parsedReadBytes, err := parseInt64(rawReadBytes)
+		if err != nil {
+			return -1, -1, err
+		}
+
+		parsedWriteBytes, err := parseInt64(rawWriteBytes)
+		if err != nil {
+			return -1, -1, err
+		}
+
+		readBytes += parsedReadBytes
+		writeBytes += parsedWriteBytes
+	}
+
+	return readBytes, writeBytes, nil
+}
+
+func readCgroupv2Blkio(containerDir string) (int64, error) {
+	dataFile := containerDir + "/io.stat"
+	readBytes, writeBytes, err := readIoStat(dataFile)
+	if err != nil {
+		return -1, err
+	}
+	return readBytes + writeBytes, nil
+}
+
+func (DockerCgroupv2BlkioInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
+	dirname := "/sys/fs/cgroup/system.slice"
+	prefix := "docker-"
+
+	err, dirs := listCgroupv2Folders(prefix)
+	if err != nil {
+		log.Println("error measuring docker cgroup blkio", err)
+		return
+	}
+
+	for _, containerIdFolder := range dirs {
+		index := len(prefix)
+		// 12 is the length of the short-form for container IDs
+		containerId := containerIdFolder[index : index+12]
+		containerFolder := dirname + "/" + containerIdFolder
+		value, err := readCgroupv2Blkio(containerFolder)
+		if err != nil {
+			log.Println("error reading data file", containerFolder, err)
+			continue
+		}
+		channel.Put(telem.NewTelemetry("docker_cgrp_blkio/"+containerId, float64(value)))
+	}
 }
 
 func (KubernetesCgroupBlkioInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
@@ -714,7 +789,12 @@ func (d defaultInstrumentFactory) NewKubernetesCgroupCpuInstrument() Instrument 
 }
 
 func (d defaultInstrumentFactory) NewDockerCgroupBlkioInstrument() Instrument {
-	return DockerCgroupBlkioInstrument{}
+	cgroup := checkCgroup()
+	if cgroup == "v1" {
+		return DockerCgroupv1BlkioInstrument{}
+	} else {
+		return DockerCgroupv2BlkioInstrument{}
+	}
 }
 
 func (d defaultInstrumentFactory) NewDockerCgroupNetworkInstrument() Instrument {
