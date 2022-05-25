@@ -64,7 +64,8 @@ type NetworkDataRateInstrument struct {
 type DiskDataRateInstrument struct {
 	Devices []string
 }
-type DockerCgroupCpuInstrument struct{}
+type DockerCgroupv1CpuInstrument struct{}
+type DockerCgroupv2CpuInstrument struct{}
 type DockerCgroupBlkioInstrument struct{}
 type DockerCgroupNetworkInstrument struct {
 	pids map[string]string
@@ -330,7 +331,7 @@ func (i WifiSignalInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
 	}
 }
 
-func (DockerCgroupCpuInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
+func (DockerCgroupv1CpuInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
 	dirs, err := listFilterDir("/sys/fs/cgroup/cpuacct/docker", func(info os.FileInfo) bool {
 		return info.IsDir() && info.Name() != "." && info.Name() != ".."
 	})
@@ -351,6 +352,39 @@ func (DockerCgroupCpuInstrument) MeasureAndReport(channel telem.TelemetryChannel
 	}
 }
 
+func listCgroupv2Folders(prefix string) (error, []string) {
+	dirname := "/sys/fs/cgroup/system.slice"
+	dirs, err := listFilterDir(dirname, func(info os.FileInfo) bool {
+		return info.IsDir() && info.Name() != "." && info.Name() != ".." && strings.HasPrefix(info.Name(), prefix)
+	})
+
+	if err != nil {
+		log.Println("error cgroup v2 folders", err)
+		return err, make([]string, 0)
+	}
+	return nil, dirs
+}
+
+func (DockerCgroupv2CpuInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
+	dirname := "/sys/fs/cgroup/system.slice"
+	prefix := "docker-"
+
+	err, dirs := listCgroupv2Folders(prefix)
+	if err != nil {
+		log.Println(err)
+	}
+	for _, containerIdFolder := range dirs {
+		index := len(prefix)
+		containerId := containerIdFolder[index : index+12]
+		containerFolder := dirname + "/" + containerIdFolder
+		value, err := readCgroupv2Cpu(containerFolder)
+		if err == nil {
+			channel.Put(telem.NewTelemetry("docker_cgrp_cpu/"+containerId, float64(value)))
+		} else {
+			log.Println("error reading data file", containerFolder, err)
+		}
+	}
+}
 func readCgroupCpu(containerFolder string) (int64, error) {
 	dataFile := containerFolder + "/cpuacct.usage"
 	value, err := readLineAndParseInt(dataFile)
@@ -358,6 +392,22 @@ func readCgroupCpu(containerFolder string) (int64, error) {
 		return -1, err
 	}
 	return value, nil
+}
+
+func readCgroupv2Cpu(containerFolder string) (int64, error) {
+	dataFile := containerFolder + "/cpu.stat"
+	// usage_usec 293933 (cpu in microseconds)
+	value, err := readFirstLine(dataFile)
+	if err != nil {
+		return -1, err
+	}
+	unparsed := strings.Split(value, " ")[1]
+	parsed, err := strconv.ParseInt(unparsed, 10, 64)
+	if err != nil {
+		return -1, err
+	}
+	// convert to nanoseconds - cgroup v1 default
+	return parsed * 1000, nil
 }
 
 func fetchKubernetesContainerDirs(kubepodDir string) []string {
@@ -641,8 +691,22 @@ func (d defaultInstrumentFactory) NewPsiIoInstrument() Instrument {
 	return PsiIoInstrument{}
 }
 
+func checkCgroup() string {
+	if _, err := os.Stat("/sys/fs/cgroup/cgroup.controllers"); os.IsNotExist(err) {
+		return "v1"
+	} else {
+		return "v2"
+	}
+}
+
 func (d defaultInstrumentFactory) NewDockerCgroupCpuInstrument() Instrument {
-	return DockerCgroupCpuInstrument{}
+	cgroup := checkCgroup()
+	if cgroup == "v1" {
+		return DockerCgroupv1CpuInstrument{}
+	} else {
+		return DockerCgroupv2CpuInstrument{}
+	}
+
 }
 
 func (d defaultInstrumentFactory) NewKubernetesCgroupCpuInstrument() Instrument {
