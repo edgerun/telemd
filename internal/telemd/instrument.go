@@ -75,6 +75,7 @@ type DockerCgroupv1NetworkInstrument struct {
 type DockerCgroupv2NetworkInstrument struct {
 	pids map[string]string
 }
+type DockerCgroupv1MemoryInstrument struct{}
 type DockerCgroupv2MemoryInstrument struct{}
 
 type KubernetesCgroupCpuInstrument struct{}
@@ -616,6 +617,27 @@ func (DockerCgroupv1BlkioInstrument) MeasureAndReport(channel telem.TelemetryCha
 	}
 }
 
+func (k DockerCgroupv1MemoryInstrument) MeasureAndReport(ch telem.TelemetryChannel) {
+	dirs, err := listFilterDir("/sys/fs/cgroup/memory/docker", func(info os.FileInfo) bool {
+		return info.IsDir() && info.Name() != "." && info.Name() != ".."
+	})
+
+	if err != nil {
+		log.Println("error measuring docker cgroup memory", err)
+		return
+	}
+
+	for _, containerId := range dirs {
+		containerDir := "/sys/fs/cgroup/memory/docker/" + containerId
+		value, err := readCgroupMemory(containerDir)
+		if err == nil {
+			ch.Put(telem.NewTelemetry("docker_cgrp_memory/"+containerId, float64(value)))
+		} else {
+			log.Println("error reading data file", containerId, err)
+		}
+	}
+}
+
 func readCgroupBlkio(containerDir string) (int64, error) {
 	dataFile := containerDir + "/blkio.throttle.io_service_bytes"
 	value, err := readBlkioTotal(dataFile)
@@ -913,7 +935,12 @@ func (d defaultInstrumentFactory) NewKubernetesCgroupMemoryInstrument() Instrume
 }
 
 func (d defaultInstrumentFactory) NewDockerCgroupMemoryInstrument() Instrument {
-	return DockerCgroupv2MemoryInstrument{}
+	cgroup := checkCgroup()
+	if cgroup == "v1" {
+		return DockerCgroupv1MemoryInstrument{}
+	} else {
+		return DockerCgroupv2MemoryInstrument{}
+	}
 }
 
 type armInstrumentFactory struct {
