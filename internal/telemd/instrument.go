@@ -68,7 +68,10 @@ type DockerCgroupv1CpuInstrument struct{}
 type DockerCgroupv2CpuInstrument struct{}
 type DockerCgroupv1BlkioInstrument struct{}
 type DockerCgroupv2BlkioInstrument struct{}
-type DockerCgroupNetworkInstrument struct {
+type DockerCgroupv1NetworkInstrument struct {
+	pids map[string]string
+}
+type DockerCgroupv2NetworkInstrument struct {
 	pids map[string]string
 }
 
@@ -479,7 +482,7 @@ func (KubernetesCgroupCpuInstrument) MeasureAndReport(channel telem.TelemetryCha
 	}
 }
 
-func (c *DockerCgroupNetworkInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
+func (c *DockerCgroupv1NetworkInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
 	containerIds, err := listFilterDir("/sys/fs/cgroup/cpuacct/docker", func(info os.FileInfo) bool {
 		return info.IsDir() && info.Name() != "." && info.Name() != ".."
 	})
@@ -493,6 +496,55 @@ func (c *DockerCgroupNetworkInstrument) MeasureAndReport(channel telem.Telemetry
 	}
 
 	for _, containerId := range containerIds {
+		pid, ok := c.pids[containerId]
+
+		if !ok {
+			// refresh pids
+			pids, err := containerProcessIds()
+			if err != nil {
+				log.Println("unable to get container process ids", err)
+				continue
+			}
+			c.pids = pids
+
+			pid, ok = c.pids[containerId]
+			if !ok {
+				log.Println("could not get pid of container after refresh", containerId)
+				continue
+			}
+		}
+
+		rx, tx, err := readTotalProcessNetworkStats(pid)
+		if err != nil {
+			if os.IsNotExist(err) {
+				delete(c.pids, containerId) // delete now and wait for next iteration to refresh
+			} else {
+				log.Println("error parsing network stats of pid", pid, err, err)
+			}
+			continue
+		}
+
+		channel.Put(telem.NewTelemetry("docker_cgrp_net/"+containerId[:12], float64(rx+tx)))
+	}
+}
+
+func (c *DockerCgroupv2NetworkInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
+	prefix := "docker-"
+
+	err, dirs := listCgroupv2Folders(prefix)
+	if err != nil {
+		log.Println("error measuring docker cgroup blkio", err)
+		return
+	}
+	if len(dirs) == 0 {
+		return
+	}
+
+	for _, containerIdFolder := range dirs {
+		index := len(prefix)
+		stop := len(containerIdFolder) - len(".scope")
+		// 12 is the length of the short-form for container IDs
+		containerId := containerIdFolder[index:stop]
 		pid, ok := c.pids[containerId]
 
 		if !ok {
@@ -803,10 +855,18 @@ func (d defaultInstrumentFactory) NewDockerCgroupNetworkInstrument() Instrument 
 	if err != nil {
 		log.Println("unable to get process ids of containers", err)
 	}
+	cgroup := checkCgroup()
 
-	return &DockerCgroupNetworkInstrument{
-		pids: pidMap,
+	if cgroup == "v1" {
+		return &DockerCgroupv1NetworkInstrument{
+			pids: pidMap,
+		}
+	} else {
+		return &DockerCgroupv2NetworkInstrument{
+			pids: pidMap,
+		}
 	}
+
 }
 
 func (d defaultInstrumentFactory) NewKubernetesCgroupBlkioInstrument() Instrument {
