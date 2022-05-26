@@ -5,7 +5,7 @@ image=edgerun/telemd
 if [[ $1 ]]; then
 	version="$1"
 else
-	version="latest"
+	version=$(git rev-parse --short HEAD)
 fi
 
 basetag="${image}:${version}"
