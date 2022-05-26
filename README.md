@@ -149,5 +149,5 @@ Execute, or run (`./scripts/docker-run.sh`):
     docker run --privileged=true \
       --network host \
       -v /sys:/sys:ro \
-      -e telemd_instruments_disable=docker_cgrp_net 
+      -e telemd_instruments_disable="kubernetes_cgrp_cpu kubernetes_cgrp_blkio kubernetes_cgrp_memory docker_cgrp_net" \
       edgerun/telemd
