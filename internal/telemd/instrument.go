@@ -499,7 +499,6 @@ func (c *DockerCgroupv1NetworkInstrument) MeasureAndReport(channel telem.Telemet
 	}
 
 	for _, containerId := range containerIds {
-		containerId = containerId[:12]
 		pid, ok := c.pids[containerId]
 
 		if !ok {
@@ -547,9 +546,7 @@ func (c *DockerCgroupv2NetworkInstrument) MeasureAndReport(channel telem.Telemet
 	for _, containerIdFolder := range dirs {
 		index := len(prefix)
 		stop := len(containerIdFolder) - len(".scope")
-		// 12 is the length of the short-form for container IDs
 		containerId := containerIdFolder[index:stop]
-		containerId = containerIdFolder[index : index+12]
 		pid, ok := c.pids[containerId]
 
 		if !ok {

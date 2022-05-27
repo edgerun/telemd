@@ -241,7 +241,58 @@ func allPids() ([]string, error) {
 	return dirs, nil
 }
 
+func getContainerId(pid string) (string, error) {
+	// gets content of /proc/<pid>/cgroup
+	// in cgroup v1 is list of multiple lines -> look for first that contains 'docker' substring
+	// 11:freezer:/docker/dc65d1e5672961e7191260dec3dd532ad346719ea3ae23035e3b560867bd1183
+	file, err := os.Open("/proc/" + pid + "/cgroup")
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.Contains(line, "docker") {
+			split := strings.Split(line, "/")[2]
+			prefix := "docker-"
+			suffix := ".scope"
+
+			if strings.HasPrefix(split, prefix) {
+				// cgroup v2
+				return strings.TrimSuffix(strings.TrimPrefix(split, prefix), suffix), nil
+			} else {
+				// cgroup v1
+				return split, nil
+			}
+		}
+	}
+	return "", errors.New("Did not find container for PID " + pid)
+}
+
 func containerProcessIds() (map[string]string, error) {
+	// get all PIDs from /proc
+	pids, err := allPids()
+
+	if err != nil {
+		return nil, err
+	}
+
+	pidMap := make(map[string]string, 0)
+	for _, pid := range pids {
+		containerId, err := getContainerId(pid)
+		if err == nil {
+			if _, ok := pidMap[containerId]; !ok {
+				pidMap[containerId] = pid
+			}
+		}
+	}
+	return pidMap, nil
+}
+
+// requires root
+func containerProcessIdsUsingNsenter() (map[string]string, error) {
 	// get all PIDs from /proc
 	pids, err := allPids()
 	if err != nil {
@@ -252,7 +303,7 @@ func containerProcessIds() (map[string]string, error) {
 	// execute for each PID 'nsenter -t $PID -u hostname'
 	for _, pid := range pids {
 		// check if result is equal to short containerId
-		command, err := execCommand("sudo nsenter -t " + pid + " -u hostname")
+		command, err := execCommand("nsenter -t " + pid + " -u hostname")
 		if err == nil {
 			pidMap[command] = pid
 		}
