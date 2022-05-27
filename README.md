@@ -138,17 +138,12 @@ telemd_disk_devices=sdb
 
 Run as docker container
 -----------------------
-Due to the alpine linux container `docker_cgrp_net` metric will not be available.
-
-The reason for this is that we do not include a Docker installation in the container, and the `/usr/bin/docker` 
-on most hosts will not executable, because of Alpine Linux does not use the gcc compiler but musl instead.
-
-`docker` has to be available in the container due to telemd currently relying on it to fetch the container PIDs.
-
 Execute, or run (`./scripts/docker-run.sh`):
 
     docker run --privileged=true \
-      --network host \
-      -v /sys:/sys:ro \
-      -e telemd_instruments_disable="kubernetes_cgrp_cpu kubernetes_cgrp_blkio kubernetes_cgrp_memory docker_cgrp_net" \
-      edgerun/telemd
+    --network host \
+    -v /sys:/sys:ro \
+    -v /proc:/proc \
+    -v /var/run/docker.sock:/var/run/docker.sock \
+    -e telemd_instruments_disable="kubernetes_cgrp_cpu kubernetes_cgrp_blkio kubernetes_cgrp_memory kubernetes_cgrp_net" \
+    edgerun/telemd
