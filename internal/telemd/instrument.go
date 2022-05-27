@@ -33,6 +33,7 @@ type InstrumentFactory interface {
 	NewDockerCgroupMemoryInstrument() Instrument
 	NewKubernetesCgroupBlkioInstrument() Instrument
 	NewKubernetesCgroupMemoryInstrument() Instrument
+	NewKubernetesCgroupNetInstrument() Instrument
 	NewPsiCpuInstrument() Instrument
 	NewPsiMemoryInstrument() Instrument
 	NewPsiIoInstrument() Instrument
@@ -75,12 +76,16 @@ type DockerCgroupv1NetworkInstrument struct {
 type DockerCgroupv2NetworkInstrument struct {
 	pids map[string]string
 }
+
 type DockerCgroupv1MemoryInstrument struct{}
 type DockerCgroupv2MemoryInstrument struct{}
 
 type KubernetesCgroupCpuInstrument struct{}
 type KubernetesCgroupBlkioInstrument struct{}
 type KuberenetesCgroupMemoryInstrument struct{}
+type KubernetesCgroupv1NetworkInstrument struct {
+	pids map[string]string
+}
 
 func (CpuUtilInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
 	then := readCpuUtil()
@@ -531,6 +536,53 @@ func (c *DockerCgroupv1NetworkInstrument) MeasureAndReport(channel telem.Telemet
 	}
 }
 
+func (c KubernetesCgroupv1NetworkInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
+	var kubepodRootDir = "/sys/fs/cgroup/cpuacct/kubepods"
+	var bestEffortDir = kubepodRootDir + "/" + "besteffort"
+	var burstableDir = kubepodRootDir + "/" + "burstable"
+	var guaranteedDir = kubepodRootDir + "/" + "guaranteed"
+
+	for _, kubepodDir := range [3]string{bestEffortDir, burstableDir, guaranteedDir} {
+
+		go func(kubepodDir string) {
+			for _, containerDir := range fetchKubernetesContainerDirs(kubepodDir) {
+				containerId := filepath.Base(containerDir)
+
+				pid, ok := c.pids[containerId]
+
+				if !ok {
+					// refresh pids
+					pids, err := containerProcessIds()
+					if err != nil {
+						log.Println("unable to get container process ids", err)
+						continue
+					}
+					c.pids = pids
+
+					pid, ok = c.pids[containerId]
+					if !ok {
+						log.Println("could not get pid of container after refresh", containerId)
+						continue
+					}
+				}
+
+				rx, tx, err := readTotalProcessNetworkStats(pid)
+				if err != nil {
+					if os.IsNotExist(err) {
+						delete(c.pids, containerId) // delete now and wait for next iteration to refresh
+					} else {
+						log.Println("error parsing network stats of pid", pid, err, err)
+					}
+					continue
+				}
+
+				channel.Put(telem.NewTelemetry("kubernetes_cgrp_net/"+containerId[:12], float64(rx+tx)))
+			}
+		}(kubepodDir)
+	}
+
+}
+
 func (c *DockerCgroupv2NetworkInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
 	prefix := "docker-"
 
@@ -931,6 +983,9 @@ func (d defaultInstrumentFactory) NewKubernetesCgroupBlkioInstrument() Instrumen
 
 func (d defaultInstrumentFactory) NewKubernetesCgroupMemoryInstrument() Instrument {
 	return KuberenetesCgroupMemoryInstrument{}
+}
+func (d defaultInstrumentFactory) NewKubernetesCgroupNetInstrument() Instrument {
+	return KubernetesCgroupv1NetworkInstrument{}
 }
 
 func (d defaultInstrumentFactory) NewDockerCgroupMemoryInstrument() Instrument {

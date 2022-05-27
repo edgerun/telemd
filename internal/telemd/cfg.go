@@ -77,6 +77,7 @@ func NewDefaultConfig() *Config {
 		"kubernetes_cgrp_cpu":    1 * time.Second,
 		"kubernetes_cgrp_blkio":  1 * time.Second,
 		"kubernetes_cgrp_memory": 1 * time.Second,
+		"kubernetes_cgrp_net":    1 * time.Second,
 	}
 
 	return cfg

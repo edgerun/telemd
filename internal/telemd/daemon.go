@@ -53,6 +53,7 @@ func (daemon *Daemon) initInstruments(factory InstrumentFactory) {
 		"kubernetes_cgrp_cpu":    factory.NewKubernetesCgroupCpuInstrument(),
 		"kubernetes_cgrp_blkio":  factory.NewKubernetesCgroupBlkioInstrument(),
 		"kubernetes_cgrp_memory": factory.NewKubernetesCgroupMemoryInstrument(),
+		"kubernetes_cgrp_net":    factory.NewKubernetesCgroupNetInstrument(),
 	}
 
 	activeNetDevice, err := findActiveNetDevice()
