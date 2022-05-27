@@ -3,7 +3,9 @@ package telemd
 import (
 	"bufio"
 	"errors"
+	"log"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -226,7 +228,39 @@ func readTotalProcessNetworkStats(pid string) (rx int64, tx int64, err error) {
 	return rx, tx, scanner.Err()
 }
 
+func allPids() ([]string, error) {
+	r, _ := regexp.Compile("^\\d*")
+	dirs, err := listFilterDir("/proc", func(info os.FileInfo) bool {
+		return info.IsDir() && r.MatchString(info.Name())
+	})
+
+	if err != nil {
+		log.Println("error fetching PIDs", err)
+		return nil, err
+	}
+	return dirs, nil
+}
+
 func containerProcessIds() (map[string]string, error) {
+	// get all PIDs from /proc
+	pids, err := allPids()
+	if err != nil {
+		return nil, err
+	}
+
+	pidMap := make(map[string]string, 0)
+	// execute for each PID 'nsenter -t $PID -u hostname'
+	for _, pid := range pids {
+		// check if result is equal to short containerId
+		command, err := execCommand("sudo nsenter -t " + pid + " -u hostname")
+		if err == nil {
+			pidMap[command] = pid
+		}
+	}
+	return pidMap, nil
+}
+
+func containerProcessIdsUsingDockerCli() (map[string]string, error) {
 	command, err := execCommand("docker ps -q | xargs docker inspect --format '{{ .Id }} {{ .State.Pid }}'")
 
 	if err != nil {
