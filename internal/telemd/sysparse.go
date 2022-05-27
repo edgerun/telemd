@@ -266,6 +266,10 @@ func getContainerId(pid string) (string, error) {
 				// cgroup v1
 				return split, nil
 			}
+		} else if strings.Contains(line, "kubepods") {
+			// kubernetes
+			// freezer:/kubepods/besteffort/podae778fdf-394c-4356-9625-ea50666783b1/2cc54a6877a50da0b6a2a5340dd1e8c5707a1d7d4b363e03b7cde76d2569f0c0
+			return strings.Split(line, "/")[4], nil
 		}
 	}
 	return "", errors.New("Did not find container for PID " + pid)
