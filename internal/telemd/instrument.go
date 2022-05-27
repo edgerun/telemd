@@ -469,12 +469,10 @@ func (KubernetesCgroupCpuInstrument) MeasureAndReport(channel telem.TelemetryCha
 	var guaranteedDir = kubepodRootDir + "/" + "guaranteed"
 
 	for _, kubepodDir := range [3]string{bestEffortDir, burstableDir, guaranteedDir} {
-		log.Println(kubepodDir)
 		go func(kubepodDir string) {
 			for _, containerDir := range fetchKubernetesContainerDirs(kubepodDir) {
 				go func(containerDir string) {
 					containerId := filepath.Base(containerDir)
-					log.Println(containerId)
 					value, err := readCgroupCpu(containerDir)
 					if err == nil {
 						log.Println(value)
