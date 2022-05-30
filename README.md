@@ -1,6 +1,8 @@
 telemd
 ======
 
+![Docker Image Version (latest semver)](https://img.shields.io/docker/v/edgerun/telemd?color=blue&label=Docker%20version&sort=semver)
+
 A daemon that reports fine-grained systems runtime data into Redis
 
 Build
