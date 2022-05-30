@@ -61,13 +61,14 @@ The default telemd runs the following instruments:
 * `psi_memory` host's memory [pressure](https://www.kernel.org/doc/html/latest/accounting/psi.html#psi)
 * `docker_cgrp_cpu` the cpu usage time of individual docker containers
 * `docker_cgrp_blkio` the total block io usage in bytes for individual docker containers
-* `docker_cgrp_net` the total network io usage in bytes for individual docker containers
+* `docker_cgrp_net` the total network io usage in bytes for individual docker containers as well as for each interface and `rx` and `tx`
+  * I.e.: `docker_cgrp_net/<container-id>`, `docker_cgrp_net/<container-id>/<interface>`, `docker_cgrp_net/<container-id>/<interface>/[rx|tx]`
 * `docker_cgrp_memory` the total memory (RAM) usage in bytes for individual docker containers
 * `kubernetes_cgrp_cpu` the cpu usage time of individual Kubernetes Pod containers
 * `kubernetes_cgrp_blkio` the total block io usage in bytes for individual Kubernetes Pod containers
 * `kubernetes_cgrp_memory` the total memory (RAM) usage in bytes for individual Kubernetes Pod containers
-* `kubernetes_cgrp_net` the total network io usage in bytes for individual Kubernetes Pod containers
-
+* `kubernetes_cgrp_net` the total network io usage in bytes for individual Kubernetes Pod containers as well as for each interface and `rx` and `tx`
+  * I.e.: `kubernetes_cgrp_net/<container-id>`, `kubernetes_cgrp_net/<container-id>/<interface>`, `kubernetes_cgrp_net/<container-id>/<interface>/[rx|tx]`
 ### Info keys
 
 When a telemetry daemon starts, it writes static information about its host into the Redis key 
