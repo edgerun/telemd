@@ -535,6 +535,8 @@ func (c *DockerCgroupv1NetworkInstrument) MeasureAndReport(channel telem.Telemet
 		for device, irx := range rxValues {
 			itx := txValues[device]
 			channel.Put(telem.NewTelemetry("docker_cgrp_net/"+containerId[:12]+"/"+device, float64(irx+itx)))
+			channel.Put(telem.NewTelemetry("docker_cgrp_net/"+containerId[:12]+"/"+device+"/rx", float64(irx)))
+			channel.Put(telem.NewTelemetry("docker_cgrp_net/"+containerId[:12]+"/"+device+"/tx", float64(itx)))
 			rx += irx
 			tx += itx
 		}
@@ -587,6 +589,8 @@ func (c KubernetesCgroupv1NetworkInstrument) MeasureAndReport(channel telem.Tele
 				for device, irx := range rxValues {
 					itx := txValues[device]
 					channel.Put(telem.NewTelemetry("docker_cgrp_net/"+containerId[:12]+"/"+device, float64(irx+itx)))
+					channel.Put(telem.NewTelemetry("docker_cgrp_net/"+containerId[:12]+"/"+device+"/rx", float64(irx)))
+					channel.Put(telem.NewTelemetry("docker_cgrp_net/"+containerId[:12]+"/"+device+"/tx", float64(itx)))
 					rx += irx
 					tx += itx
 				}
@@ -646,6 +650,8 @@ func (c *DockerCgroupv2NetworkInstrument) MeasureAndReport(channel telem.Telemet
 		for device, irx := range rxValues {
 			itx := txValues[device]
 			channel.Put(telem.NewTelemetry("docker_cgrp_net/"+containerId[:12]+"/"+device, float64(irx+itx)))
+			channel.Put(telem.NewTelemetry("docker_cgrp_net/"+containerId[:12]+"/"+device+"/rx", float64(irx)))
+			channel.Put(telem.NewTelemetry("docker_cgrp_net/"+containerId[:12]+"/"+device+"/tx", float64(itx)))
 			rx += irx
 			tx += itx
 		}
