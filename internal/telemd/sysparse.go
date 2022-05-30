@@ -196,7 +196,7 @@ func bootTime() (int64, error) {
 //   eth0:    6391      29    0    0    0     0          0         0        0       0    0    0    0     0       0          0
 //     lo:       0       0    0    0    0     0          0         0        0       0    0    0    0     0       0          0
 // returns the sum over all network devices (rx, tx)
-func readTotalProcessNetworkStats(pid string) (rx int64, tx int64, err error) {
+func readTotalProcessNetworkStats(pid string) (rx map[string]int64, tx map[string]int64, err error) {
 	path := "/proc/" + pid + "/net/dev"
 
 	file, err := os.Open(path)
@@ -208,10 +208,11 @@ func readTotalProcessNetworkStats(pid string) (rx int64, tx int64, err error) {
 	scanner := bufio.NewScanner(file)
 	scanner.Scan() // first header
 	scanner.Scan() // second header
-
+	rxValues := make(map[string]int64)
+	txValues := make(map[string]int64)
 	for scanner.Scan() {
 		fields := strings.Fields(scanner.Text())
-
+		device := strings.TrimSuffix(fields[0], ":")
 		irx, err := parseInt64(fields[1])
 		if err != nil {
 			return rx, tx, err
@@ -221,11 +222,11 @@ func readTotalProcessNetworkStats(pid string) (rx int64, tx int64, err error) {
 			return rx, tx, err
 		}
 
-		rx += irx
-		tx += itx
+		rxValues[device] = irx
+		txValues[device] = itx
 	}
 
-	return rx, tx, scanner.Err()
+	return rxValues, txValues, scanner.Err()
 }
 
 func allPids() ([]string, error) {

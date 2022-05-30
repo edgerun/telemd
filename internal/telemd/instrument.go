@@ -520,7 +520,7 @@ func (c *DockerCgroupv1NetworkInstrument) MeasureAndReport(channel telem.Telemet
 			}
 		}
 
-		rx, tx, err := readTotalProcessNetworkStats(pid)
+		rxValues, txValues, err := readTotalProcessNetworkStats(pid)
 		if err != nil {
 			if os.IsNotExist(err) {
 				delete(c.pids, containerId) // delete now and wait for next iteration to refresh
@@ -530,6 +530,14 @@ func (c *DockerCgroupv1NetworkInstrument) MeasureAndReport(channel telem.Telemet
 			continue
 		}
 
+		rx := int64(0)
+		tx := int64(0)
+		for device, irx := range rxValues {
+			itx := txValues[device]
+			channel.Put(telem.NewTelemetry("docker_cgrp_net/"+containerId[:12]+"/"+device, float64(irx+itx)))
+			rx += irx
+			tx += itx
+		}
 		channel.Put(telem.NewTelemetry("docker_cgrp_net/"+containerId[:12], float64(rx+tx)))
 	}
 }
@@ -564,7 +572,7 @@ func (c KubernetesCgroupv1NetworkInstrument) MeasureAndReport(channel telem.Tele
 					}
 				}
 
-				rx, tx, err := readTotalProcessNetworkStats(pid)
+				rxValues, txValues, err := readTotalProcessNetworkStats(pid)
 				if err != nil {
 					if os.IsNotExist(err) {
 						delete(c.pids, containerId) // delete now and wait for next iteration to refresh
@@ -574,7 +582,15 @@ func (c KubernetesCgroupv1NetworkInstrument) MeasureAndReport(channel telem.Tele
 					continue
 				}
 
-				channel.Put(telem.NewTelemetry("kubernetes_cgrp_net/"+containerId[:12], float64(rx+tx)))
+				rx := int64(0)
+				tx := int64(0)
+				for device, irx := range rxValues {
+					itx := txValues[device]
+					channel.Put(telem.NewTelemetry("docker_cgrp_net/"+containerId[:12]+"/"+device, float64(irx+itx)))
+					rx += irx
+					tx += itx
+				}
+				channel.Put(telem.NewTelemetry("docker_cgrp_net/"+containerId[:12], float64(rx+tx)))
 			}
 		}(kubepodDir)
 	}
@@ -615,7 +631,7 @@ func (c *DockerCgroupv2NetworkInstrument) MeasureAndReport(channel telem.Telemet
 			}
 		}
 
-		rx, tx, err := readTotalProcessNetworkStats(pid)
+		rxValues, txValues, err := readTotalProcessNetworkStats(pid)
 		if err != nil {
 			if os.IsNotExist(err) {
 				delete(c.pids, containerId) // delete now and wait for next iteration to refresh
@@ -625,6 +641,14 @@ func (c *DockerCgroupv2NetworkInstrument) MeasureAndReport(channel telem.Telemet
 			continue
 		}
 
+		rx := int64(0)
+		tx := int64(0)
+		for device, irx := range rxValues {
+			itx := txValues[device]
+			channel.Put(telem.NewTelemetry("docker_cgrp_net/"+containerId[:12]+"/"+device, float64(irx+itx)))
+			rx += irx
+			tx += itx
+		}
 		channel.Put(telem.NewTelemetry("docker_cgrp_net/"+containerId[:12], float64(rx+tx)))
 	}
 }
