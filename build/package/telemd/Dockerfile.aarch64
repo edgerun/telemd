@@ -11,7 +11,7 @@ RUN CGO_ENABLED=0 GOARCH=arm64 go build -v -o /usr/local/bin/telemd cmd/telemd/m
 #############
 ### prod ###
 #############
-FROM aarch64/alpine
+FROM arm64v8/alpine
 COPY --from=builder /usr/local/bin /usr/local/bin
 RUN apk update
 RUN apk add iw
