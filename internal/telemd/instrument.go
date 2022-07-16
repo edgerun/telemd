@@ -844,27 +844,18 @@ func (KubernetesCgroupBlkioInstrument) MeasureAndReport(channel telem.TelemetryC
 }
 
 func readMemory(path string) (val int64, err error) {
-	var rss, cache, swap int64
 	visitorErr := visitLines(path, func(line string) bool {
-		if strings.HasPrefix(line, "total_rss") {
-			rss, err = strconv.ParseInt(strings.Split(line, " ")[1], 10, 64)
-		}
-		if strings.HasPrefix(line, "total_cache") {
-			cache, err = strconv.ParseInt(strings.Split(line, " ")[1], 10, 64)
-		}
-		if strings.HasPrefix(line, "total_swap") {
-			swap, err = strconv.ParseInt(strings.Split(line, " ")[1], 10, 64)
-		}
+		val, err = strconv.ParseInt(line, 10, 64)
 		return true
 	})
 	if visitorErr != nil {
 		return val, visitorErr
 	}
-	return rss + cache + swap, err
+	return
 }
 
 func readCgroupMemory(containerDir string) (int64, error) {
-	dataFile := containerDir + "/memory.stat"
+	dataFile := containerDir + "/memory.usage_in_bytes"
 	value, err := readMemory(dataFile)
 	if err != nil {
 		return -1, err
