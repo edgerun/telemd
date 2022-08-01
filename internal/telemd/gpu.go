@@ -214,22 +214,26 @@ func (instr X86GpuUtilInstrument) MeasureAndReport(channel telem.TelemetryChanne
 		frequencies, err := execute("gpu_util", strconv.Itoa(id))
 		if err != nil {
 			log.Println("Error reading gpu utilization", err)
+			return
 		}
 
-		if len(frequencies) != 1 {
-			log.Println("Expected 1 gpu utilization measurement but were ", len(frequencies))
+		if len(frequencies) != 2 {
+			log.Println("Expected 2 gpu utilization measurement but were ", len(frequencies))
 			return
 		}
 
 		//Format: id-name-measure-value
-		values := strings.Split(frequencies[0], "-")
-		frequency, err := strconv.ParseFloat(values[3], 64)
-		if err != nil {
-			log.Println("Expected number from gpu_util, but got: ", values[3])
-			return
+		for i := 0; i < 2; i++ {
+			values := strings.Split(frequencies[i], "-")
+			frequency, err := strconv.ParseFloat(values[3], 64)
+			if err != nil {
+				log.Println("Expected number from gpu_util, but got: ", values[3])
+				return
+			}
+
+			channel.Put(telem.NewTelemetry(values[2]+telem.TopicSeparator+strconv.Itoa(id), frequency))
 		}
 
-		channel.Put(telem.NewTelemetry("gpu_util"+telem.TopicSeparator+strconv.Itoa(id), frequency))
 	}
 
 	for id, _ := range instr.Devices {

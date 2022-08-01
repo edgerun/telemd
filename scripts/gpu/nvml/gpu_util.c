@@ -12,33 +12,6 @@ void fail ()
     exit (-1);
 }
 
-// source: https://github.com/gpeled/tensors/blob/master/gpuutil.c
-int showUtilization (unsigned int i, nvmlDevice_t device, nvmlSamplingType_t type, int sleepInterval, int iterations)
-{
-    nvmlReturn_t result;
-
-    unsigned long long lastSeenTimeStamp = 0;
-    nvmlValueType_t sampleValType;
-    unsigned int sampleCount = 1;
-    nvmlSample_t samples;
-    int sum = 0;
-
-    for (int i = 0; i < iterations; i++) {
-        //printf("About to query device utilization. sampleCount=%d\n",sampleCount);
-        result = nvmlDeviceGetSamples (device, type,
-                                       lastSeenTimeStamp, &sampleValType, &sampleCount, &samples);
-        if (NVML_SUCCESS != result) {
-            printf ("Error: Failed to get samples for device %i: %s\n", i, nvmlErrorString (result));
-            fail ();
-        }
-        int util = samples.sampleValue.uiVal;
-        sum += util;
-        //printf("Iteration %d. GPU utilization: %d\n",i,util );
-        if ((iterations - i) > 1) sleep (sleepInterval);
-    }
-    int average = sum / iterations;
-    return average;
-}
 
 int main (int argc, char *argv[])
 {
@@ -76,17 +49,12 @@ int main (int argc, char *argv[])
                     fail();
                 }
 
-                nvmlSamplingType_t type = NVML_GPU_UTILIZATION_SAMPLES;
-                int util = showUtilization (i, device, type, 1, 1);
-                printf ("%d-%s-gpu_util-%d\n", i, name,  util);
+                nvmlUtilization_t device_utilization;
+                result = nvmlDeviceGetUtilizationRates(device, &device_utilization);
 
-        //        type = NVML_TOTAL_POWER_SAMPLES;
-        //        util = showUtilization (i, device, type, 1, 1);
-        //        printf ("%d-%s-total_power-%d\n", i, name , util);
-        //
-        //        type = NVML_MEMORY_UTILIZATION_SAMPLES;
-        //        util = showUtilization (i, device, type, 1, 1);
-        //        printf ("%d-%s-memory_util-%d\n", i, name , util);
+                printf ("%d-%s-gpu_util-%d\n", i, name,  device_utilization.gpu);
+                printf ("%d-%s-gpu_util_memory-%d\n", i, name,  device_utilization.memory);
+
 
         }
     } else if(argc == 2) {
@@ -105,10 +73,11 @@ int main (int argc, char *argv[])
             printf ("Error: failed to get name of device %i: %s\n", i, nvmlErrorString (result));
             fail();
         }
+        nvmlUtilization_t device_utilization;
+        result = nvmlDeviceGetUtilizationRates(device, &device_utilization);
 
-        nvmlSamplingType_t type = NVML_GPU_UTILIZATION_SAMPLES;
-        int util = showUtilization (i, device, type, 1, 1);
-        printf ("%d-%s-gpu_util-%d\n", i, name,  util);
+        printf ("%d-%s-gpu_util-%d\n", i, name,  device_utilization.gpu);
+        printf ("%d-%s-gpu_util_memory-%d\n", i, name,  device_utilization.memory);
     } else {
         printf("Error: only zero or one argument supported");
     }
