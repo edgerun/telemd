@@ -2,7 +2,7 @@
 #################
 ### gpu-build ###
 #################
-FROM nvidia/cuda as gpu-build
+FROM nvidia/cuda:10.1-cudnn7-devel-ubuntu18.04 as gpu-build
 
 RUN apt update -y && apt install make
 WORKDIR /usr/local/cuda/nvml/example
