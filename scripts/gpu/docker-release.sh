@@ -35,7 +35,7 @@ docker manifest create ${basetag} \
 	${basetag}-arm64v8
 
 # explicit annotations
-docker manifest annotate ${basetag} ${basetag}-arm64v8 --os "linux" --arch "arm" --variant "v8"
+docker manifest annotate ${basetag} ${basetag}-arm64v8 --os "linux" --arch "arm64" --variant "v8"
 
 
 # ship it
