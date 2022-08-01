@@ -70,7 +70,13 @@ The default telemd runs the following instruments:
 * `kubernetes_cgrp_net` the total network io usage in bytes for individual Kubernetes Pod containers as well as for each interface and `rx` and `tx`
   * I.e.: `kubernetes_cgrp_net/<container-id>`, `kubernetes_cgrp_net/<container-id>/<interface>`, `kubernetes_cgrp_net/<container-id>/<interface>/[rx|tx]`
 * `gpu_freq` the current clock frequency of GPUs
-* `gpu_util` GPU utilization of the last second in `%`
+  * On normal Nvidia GPUs (i.e., on `amd64` systems), we use [nvmlDeviceGetClock](https://docs.nvidia.com/deploy/nvml-api/group__nvmlDeviceQueries.html#group__nvmlDeviceQueries_1g2efc4dd4096173f01d80b2a8bbfd97ad) 
+  * On Jetson Boards, we read from `/sys/devices/gpu.0/devfreq/%s/cur_freq`
+* `gpu_util` GPU utilization in `%`
+  * On normal Nvidia GPUs (i.e., on `amd64` systems) we use [nvmlDeviceGetUtilizationRates](https://docs.nvidia.com/deploy/nvml-api/group__nvmlDeviceQueries.html#group__nvmlDeviceQueries_1g540824faa6cef45500e0d1dc2f50b321)
+  * On Jetson Boards we read from `/sys/devices/gpu.0/load`
+* `gpu_util_memory` GPU memory utilization of the last second in `%`
+  * This is only available on normal Nvidia GPUs, see [nvmlDeviceGetUtilizationRates](https://docs.nvidia.com/deploy/nvml-api/group__nvmlDeviceQueries.html#group__nvmlDeviceQueries_1g540824faa6cef45500e0d1dc2f50b321)
 ### Info keys
 
 When a telemetry daemon starts, it writes static information about its host into the Redis key 
