@@ -6,4 +6,4 @@
 BASE="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 PROJECT_ROOT=$(realpath "${BASE}/../../")
 cd $PROJECT_ROOT
-docker build -t edgerun/telemd-gpu:latest-amd64 -f build/package/telemd-gpu/Dockerfile.amd64 .
+docker build -t edgerun/telemd-gpu:$(git rev-parse --short HEAD)-amd64 -f build/package/telemd-gpu/Dockerfile.amd64 .
