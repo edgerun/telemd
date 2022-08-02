@@ -39,7 +39,8 @@ RUN CGO_ENABLED=0 go build -tags GPU_SUPPORT -o /usr/local/bin/telemd cmd/telemd
 #############
 ### prod ###
 #############
-FROM debian:stretch-slim
+FROM nvidia/cuda:10.1-base-ubuntu18.04
+RUN ldconfig
 COPY --from=builder /usr/local/bin /usr/local/bin
 COPY --from=gpu-build /home/gpu_freq /usr/local/bin/gpu_freq
 COPY --from=gpu-build /home/list_gpus /usr/local/bin/list_gpus
