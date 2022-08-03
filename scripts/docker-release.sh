@@ -15,6 +15,8 @@ BASE="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 PROJECT_ROOT=$(realpath "${BASE}/../")
 cd $PROJECT_ROOT
 
+docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+
 # build all the images
 docker build -t ${basetag}-amd64 -f build/package/telemd/Dockerfile.amd64 .
 docker build -t ${basetag}-arm32v7 -f build/package/telemd/Dockerfile.arm32v7 .
