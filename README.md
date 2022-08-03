@@ -178,3 +178,7 @@ Execute, or run (`./scripts/docker-run.sh`):
     -e telemd_instruments_disable="kubernetes_cgrp_cpu kubernetes_cgrp_blkio kubernetes_cgrp_memory kubernetes_cgrp_net" \
     -e telemd_proc_mount=/proc_host
     edgerun/telemd
+
+### GPU
+
+Don't forget to add `--gpus all` argument in case you run this on an `amd64` machine.
