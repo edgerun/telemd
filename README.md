@@ -1,7 +1,7 @@
 telemd
 ======
 
-![Docker Image Version (latest semver)](https://img.shields.io/docker/v/edgerun/telemd?color=blue&label=Docker%20version&sort=semver)
+![Docker Image Version (latest semver)](https://img.shields.io/docker/v/edgerun/telemd-gpu?color=blue&label=Docker%20version&sort=semver)
 
 A daemon that reports fine-grained systems runtime data into Redis
 
@@ -77,6 +77,25 @@ The default telemd runs the following instruments:
   * On Jetson Boards we read from `/sys/devices/gpu.0/load`
 * `gpu_util_memory` GPU memory utilization of the last second in `%`
   * This is only available on normal Nvidia GPUs, see [nvmlDeviceGetUtilizationRates](https://docs.nvidia.com/deploy/nvml-api/group__nvmlDeviceQueries.html#group__nvmlDeviceQueries_1g540824faa6cef45500e0d1dc2f50b321)
+  
+### GPU support
+
+Telemd enables GPU monitoring through the usage of two images `edgerun/telemd` (CPU) & `edgerun/telemd-gpu` (GPU).
+Currently, the GPU version supports:
+
+* Nvidia on `amd64`/`x86_64` (tested with CUDA 10.1)
+* Nvidia Jetson Boards (tested with NX, TX2 and Nano)
+
+Further, on `amd64` you have to run the container with:
+
+    docker run --gpus all
+
+to pass the GPU through into the container.
+
+#### Attention
+The `amd64` version will currently (probably) only work with CUDA 10.1 installations.
+See [amd64 Dockerfile](build/package/telemd-gpu/Dockerfile.amd64)
+
 ### Info keys
 
 When a telemetry daemon starts, it writes static information about its host into the Redis key 
