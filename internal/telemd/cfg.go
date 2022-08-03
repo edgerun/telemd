@@ -31,6 +31,9 @@ type Config struct {
 			Devices []string
 		}
 	}
+	Mounts struct {
+		Proc string
+	}
 }
 
 func NewConfig() *Config {
@@ -104,6 +107,13 @@ func (cfg *Config) LoadFromEnvironment(env env.Environment) {
 			cfg.Redis.RetryBackoff = backoffDuration
 		}
 	}
+
+	procMount := "/proc"
+	if value, ok := env.Lookup("telemd_proc_mount"); ok {
+		procMount = value
+	}
+
+	cfg.Mounts.Proc = procMount
 
 	if devices, ok, err := env.LookupFields("telemd_net_devices"); err == nil && ok {
 		cfg.Instruments.Net.Devices = devices

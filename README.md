@@ -115,7 +115,7 @@ The `telemd` command allows the following parameters via environment variables.
 | `telemd_period_<instrument>` |        | A duration string (`1s`, `500ms`, ...) that indicates how often the given `instrument` should be probed |
 | `telemd_instruments_enable`  | all    | A space seperated list of instruments to use (e.g. `"cpu freq"`), these will be the only instruments that are run (mutex with disable) |
 | `telemd_instruments_disable` | none   | A space seperated list of instruments to disable, all instruments will run except for these (mutex with enable, preferred if both are set) |
-
+| `telemd_proc_mount`    | `/proc`      | Tells telemd where the `/proc` folder is mounted into the container. |
 
 #### Configuration
 

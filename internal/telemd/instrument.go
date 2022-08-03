@@ -29,11 +29,11 @@ type InstrumentFactory interface {
 	NewDockerCgroupCpuInstrument() Instrument
 	NewKubernetesCgroupCpuInstrument() Instrument
 	NewDockerCgroupBlkioInstrument() Instrument
-	NewDockerCgroupNetworkInstrument() Instrument
+	NewDockerCgroupNetworkInstrument(string) Instrument
 	NewDockerCgroupMemoryInstrument() Instrument
 	NewKubernetesCgroupBlkioInstrument() Instrument
 	NewKubernetesCgroupMemoryInstrument() Instrument
-	NewKubernetesCgroupNetInstrument() Instrument
+	NewKubernetesCgroupNetInstrument(string) Instrument
 	NewPsiCpuInstrument() Instrument
 	NewPsiMemoryInstrument() Instrument
 	NewPsiIoInstrument() Instrument
@@ -71,10 +71,12 @@ type DockerCgroupv2CpuInstrument struct{}
 type DockerCgroupv1BlkioInstrument struct{}
 type DockerCgroupv2BlkioInstrument struct{}
 type DockerCgroupv1NetworkInstrument struct {
-	pids map[string]string
+	pids      map[string]string
+	procMount string
 }
 type DockerCgroupv2NetworkInstrument struct {
-	pids map[string]string
+	pids      map[string]string
+	procMount string
 }
 
 type DockerCgroupv1MemoryInstrument struct{}
@@ -84,7 +86,8 @@ type KubernetesCgroupCpuInstrument struct{}
 type KubernetesCgroupBlkioInstrument struct{}
 type KuberenetesCgroupMemoryInstrument struct{}
 type KubernetesCgroupv1NetworkInstrument struct {
-	pids map[string]string
+	pids      map[string]string
+	procMount string
 }
 
 func (CpuUtilInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
@@ -506,7 +509,7 @@ func (c *DockerCgroupv1NetworkInstrument) MeasureAndReport(channel telem.Telemet
 
 		if !ok {
 			// refresh pids
-			pids, err := containerProcessIds()
+			pids, err := containerProcessIds(c.procMount)
 			if err != nil {
 				log.Println("unable to get container process ids", err)
 				continue
@@ -520,7 +523,7 @@ func (c *DockerCgroupv1NetworkInstrument) MeasureAndReport(channel telem.Telemet
 			}
 		}
 
-		rxValues, txValues, err := readTotalProcessNetworkStats(pid)
+		rxValues, txValues, err := readTotalProcessNetworkStats(pid, c.procMount)
 		if err != nil {
 			if os.IsNotExist(err) {
 				delete(c.pids, containerId) // delete now and wait for next iteration to refresh
@@ -560,7 +563,7 @@ func (c KubernetesCgroupv1NetworkInstrument) MeasureAndReport(channel telem.Tele
 
 				if !ok {
 					// refresh pids
-					pids, err := containerProcessIds()
+					pids, err := containerProcessIds(c.procMount)
 					if err != nil {
 						log.Println("unable to get container process ids", err)
 						continue
@@ -574,7 +577,7 @@ func (c KubernetesCgroupv1NetworkInstrument) MeasureAndReport(channel telem.Tele
 					}
 				}
 
-				rxValues, txValues, err := readTotalProcessNetworkStats(pid)
+				rxValues, txValues, err := readTotalProcessNetworkStats(pid, c.procMount)
 				if err != nil {
 					if os.IsNotExist(err) {
 						delete(c.pids, containerId) // delete now and wait for next iteration to refresh
@@ -621,7 +624,7 @@ func (c *DockerCgroupv2NetworkInstrument) MeasureAndReport(channel telem.Telemet
 
 		if !ok {
 			// refresh pids
-			pids, err := containerProcessIds()
+			pids, err := containerProcessIds(c.procMount)
 			if err != nil {
 				log.Println("unable to get container process ids", err)
 				continue
@@ -635,7 +638,7 @@ func (c *DockerCgroupv2NetworkInstrument) MeasureAndReport(channel telem.Telemet
 			}
 		}
 
-		rxValues, txValues, err := readTotalProcessNetworkStats(pid)
+		rxValues, txValues, err := readTotalProcessNetworkStats(pid, c.procMount)
 		if err != nil {
 			if os.IsNotExist(err) {
 				delete(c.pids, containerId) // delete now and wait for next iteration to refresh
@@ -891,7 +894,8 @@ func (k KuberenetesCgroupMemoryInstrument) MeasureAndReport(ch telem.TelemetryCh
 	}
 }
 
-type defaultInstrumentFactory struct{}
+type defaultInstrumentFactory struct {
+}
 
 func (d defaultInstrumentFactory) NewCpuFrequencyInstrument() Instrument {
 	return CpuScalingFrequencyInstrument{}
@@ -976,8 +980,8 @@ func (d defaultInstrumentFactory) NewDockerCgroupBlkioInstrument() Instrument {
 	}
 }
 
-func (d defaultInstrumentFactory) NewDockerCgroupNetworkInstrument() Instrument {
-	pidMap, err := containerProcessIds()
+func (d defaultInstrumentFactory) NewDockerCgroupNetworkInstrument(procMount string) Instrument {
+	pidMap, err := containerProcessIds(procMount)
 
 	if err != nil {
 		log.Println("unable to get process ids of containers", err)
@@ -986,11 +990,13 @@ func (d defaultInstrumentFactory) NewDockerCgroupNetworkInstrument() Instrument 
 
 	if cgroup == "v1" {
 		return &DockerCgroupv1NetworkInstrument{
-			pids: pidMap,
+			pids:      pidMap,
+			procMount: procMount,
 		}
 	} else {
 		return &DockerCgroupv2NetworkInstrument{
-			pids: pidMap,
+			pids:      pidMap,
+			procMount: procMount,
 		}
 	}
 
@@ -1003,8 +1009,17 @@ func (d defaultInstrumentFactory) NewKubernetesCgroupBlkioInstrument() Instrumen
 func (d defaultInstrumentFactory) NewKubernetesCgroupMemoryInstrument() Instrument {
 	return KuberenetesCgroupMemoryInstrument{}
 }
-func (d defaultInstrumentFactory) NewKubernetesCgroupNetInstrument() Instrument {
-	return KubernetesCgroupv1NetworkInstrument{}
+func (d defaultInstrumentFactory) NewKubernetesCgroupNetInstrument(procMount string) Instrument {
+	pidMap, err := containerProcessIds(procMount)
+
+	if err != nil {
+		log.Println("unable to get process ids of containers", err)
+	}
+
+	return KubernetesCgroupv1NetworkInstrument{
+		pids:      pidMap,
+		procMount: procMount,
+	}
 }
 
 func (d defaultInstrumentFactory) NewDockerCgroupMemoryInstrument() Instrument {

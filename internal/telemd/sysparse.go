@@ -196,8 +196,8 @@ func bootTime() (int64, error) {
 //   eth0:    6391      29    0    0    0     0          0         0        0       0    0    0    0     0       0          0
 //     lo:       0       0    0    0    0     0          0         0        0       0    0    0    0     0       0          0
 // returns the sum over all network devices (rx, tx)
-func readTotalProcessNetworkStats(pid string) (rx map[string]int64, tx map[string]int64, err error) {
-	path := "/proc/" + pid + "/net/dev"
+func readTotalProcessNetworkStats(pid string, procMount string) (rx map[string]int64, tx map[string]int64, err error) {
+	path := procMount + "/" + pid + "/net/dev"
 
 	file, err := os.Open(path)
 	if err != nil {
@@ -229,9 +229,9 @@ func readTotalProcessNetworkStats(pid string) (rx map[string]int64, tx map[strin
 	return rxValues, txValues, scanner.Err()
 }
 
-func allPids() ([]string, error) {
+func allPids(procFolder string) ([]string, error) {
 	r, _ := regexp.Compile("^\\d*")
-	dirs, err := listFilterDir("/proc", func(info os.FileInfo) bool {
+	dirs, err := listFilterDir(procFolder, func(info os.FileInfo) bool {
 		return info.IsDir() && r.MatchString(info.Name())
 	})
 
@@ -242,11 +242,11 @@ func allPids() ([]string, error) {
 	return dirs, nil
 }
 
-func getContainerId(pid string) (string, error) {
+func getContainerId(pid string, procMount string) (string, error) {
 	// gets content of /proc/<pid>/cgroup
 	// in cgroup v1 is list of multiple lines -> look for first that contains 'docker' substring
 	// 11:freezer:/docker/dc65d1e5672961e7191260dec3dd532ad346719ea3ae23035e3b560867bd1183
-	file, err := os.Open("/proc/" + pid + "/cgroup")
+	file, err := os.Open(procMount + "/" + pid + "/cgroup")
 	if err != nil {
 		return "", err
 	}
@@ -276,9 +276,9 @@ func getContainerId(pid string) (string, error) {
 	return "", errors.New("Did not find container for PID " + pid)
 }
 
-func containerProcessIds() (map[string]string, error) {
+func containerProcessIds(procMount string) (map[string]string, error) {
 	// get all PIDs from /proc
-	pids, err := allPids()
+	pids, err := allPids(procMount)
 
 	if err != nil {
 		return nil, err
@@ -286,7 +286,7 @@ func containerProcessIds() (map[string]string, error) {
 
 	pidMap := make(map[string]string, 0)
 	for _, pid := range pids {
-		containerId, err := getContainerId(pid)
+		containerId, err := getContainerId(pid, procMount)
 		if err == nil {
 			if _, ok := pidMap[containerId]; !ok {
 				pidMap[containerId] = pid
@@ -297,9 +297,9 @@ func containerProcessIds() (map[string]string, error) {
 }
 
 // requires root
-func containerProcessIdsUsingNsenter() (map[string]string, error) {
+func containerProcessIdsUsingNsenter(procFolder string) (map[string]string, error) {
 	// get all PIDs from /proc
-	pids, err := allPids()
+	pids, err := allPids(procFolder)
 	if err != nil {
 		return nil, err
 	}

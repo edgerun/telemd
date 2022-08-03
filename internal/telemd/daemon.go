@@ -48,12 +48,12 @@ func (daemon *Daemon) initInstruments(factory InstrumentFactory) {
 		"psi_io":                 factory.NewPsiIoInstrument(),
 		"docker_cgrp_cpu":        factory.NewDockerCgroupCpuInstrument(),
 		"docker_cgrp_blkio":      factory.NewDockerCgroupBlkioInstrument(),
-		"docker_cgrp_net":        factory.NewDockerCgroupNetworkInstrument(),
+		"docker_cgrp_net":        factory.NewDockerCgroupNetworkInstrument(cfg.Mounts.Proc),
 		"docker_cgrp_memory":     factory.NewDockerCgroupMemoryInstrument(),
 		"kubernetes_cgrp_cpu":    factory.NewKubernetesCgroupCpuInstrument(),
 		"kubernetes_cgrp_blkio":  factory.NewKubernetesCgroupBlkioInstrument(),
 		"kubernetes_cgrp_memory": factory.NewKubernetesCgroupMemoryInstrument(),
-		"kubernetes_cgrp_net":    factory.NewKubernetesCgroupNetInstrument(),
+		"kubernetes_cgrp_net":    factory.NewKubernetesCgroupNetInstrument(cfg.Mounts.Proc),
 	}
 
 	activeNetDevice, err := findActiveNetDevice()
