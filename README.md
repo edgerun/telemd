@@ -69,6 +69,11 @@ The default telemd runs the following instruments:
 * `kubernetes_cgrp_memory` the total memory (RAM) usage in bytes for individual Kubernetes Pod containers
 * `kubernetes_cgrp_net` the total network io usage in bytes for individual Kubernetes Pod containers as well as for each interface and `rx` and `tx`
   * I.e.: `kubernetes_cgrp_net/<container-id>`, `kubernetes_cgrp_net/<container-id>/<interface>`, `kubernetes_cgrp_net/<container-id>/<interface>/[rx|tx]`
+
+### GPU Support
+
+For GPU support, please take a look at the [gpu-support branch](https://github.com/edgerun/telemd/tree/gpu-support).
+
 ### Info keys
 
 When a telemetry daemon starts, it writes static information about its host into the Redis key 
