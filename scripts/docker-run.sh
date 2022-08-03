@@ -1,7 +1,7 @@
 docker run --privileged=true \
   --network host \
   -v /sys:/sys:ro \
-  -v /proc:/proc \
-  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v /proc:/proc_host \
+  -e telemd_proc_mount=/proc_host \
   -e telemd_instruments_disable="kubernetes_cgrp_cpu kubernetes_cgrp_blkio kubernetes_cgrp_memory kubernetes_cgrp_net" \
-  edgerun/telemd
+  edgerun/telemd:0.9.5
