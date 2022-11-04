@@ -22,7 +22,15 @@ COPY list_gpus.c example.c
 RUN make
 RUN mv example /home/list_gpus
 
+RUN make clean
+
+RUN rm example.c
+COPY gpu_power.c example.c
+RUN make
+RUN mv example /home/gpu_power
+
 FROM debian:stretch-slim
 COPY --from=build /home/gpu_freq /
 COPY --from=build /home/gpu_util /
 COPY --from=build /home/list_gpus /
+COPY --from=build /home/gpu_power /

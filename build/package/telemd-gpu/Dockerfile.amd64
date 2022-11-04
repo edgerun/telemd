@@ -26,6 +26,13 @@ COPY scripts/gpu/nvml/list_gpus.c example.c
 RUN make
 RUN mv example /home/list_gpus
 
+RUN make clean
+
+RUN rm example.c
+COPY scripts/gpu/nvml/gpu_power.c example.c
+RUN make
+RUN mv example /home/gpu_power
+
 
 #############
 ### build ###
@@ -45,6 +52,7 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 COPY --from=gpu-build /home/gpu_freq /usr/local/bin/gpu_freq
 COPY --from=gpu-build /home/list_gpus /usr/local/bin/list_gpus
 COPY --from=gpu-build /home/gpu_util /usr/local/bin/gpu_util
+COPY --from=gpu-build /home/gpu_power /usr/local/bin/gpu_power
 
 RUN apt update -y && apt install iw net-tools -y
 

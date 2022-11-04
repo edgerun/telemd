@@ -1,3 +1,4 @@
+//go:build GPU_SUPPORT
 // +build GPU_SUPPORT
 
 package telemd
@@ -188,6 +189,45 @@ func (instr DefaultGpuFrequencyInstrument) MeasureAndReport(channel telem.Teleme
 	// per default no gpu support
 }
 
+func (instr DefaultGpuPowerInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
+	// per default no gpu support
+}
+
+func (instr X86GpuPowerInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
+	var wg sync.WaitGroup
+	wg.Add(len(instr.Devices))
+	defer wg.Wait()
+
+	measureAndReport := func(id int) {
+		defer wg.Done()
+
+		// gpu_freq already returns MHz
+		power, err := execute("gpu_power", strconv.Itoa(id))
+		if err != nil {
+			log.Println("Error reading gpu measurements", err)
+		}
+
+		if len(power) != 1 {
+			log.Println("Expected 1 gpu power measurement but were ", len(power))
+			return
+		}
+
+		//Format: id-name-measure-value
+		values := strings.Split(power[0], "-")
+		frequency, err := strconv.ParseFloat(values[3], 64)
+		if err != nil {
+			log.Println("Expected number from gpu power, but got: ", values[3])
+			return
+		}
+
+		channel.Put(telem.NewTelemetry("gpu_power"+telem.TopicSeparator+strconv.Itoa(id), frequency))
+	}
+
+	for id, _ := range instr.Devices {
+		go measureAndReport(id)
+	}
+}
+
 func (instr DefaultGpuUtilInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
 	// per default no gpu support
 }
@@ -252,6 +292,14 @@ type X86GpuFrequencyInstrument struct {
 	Devices map[int]string
 }
 
+type DefaultGpuPowerInstrument struct {
+	Devices map[int]string
+}
+
+type X86GpuPowerInstrument struct {
+	Devices map[int]string
+}
+
 type DefaultGpuUtilInstrument struct {
 }
 
@@ -285,4 +333,12 @@ func (a arm64InstrumentFactory) NewGpuUtilInstrument(devices map[int]string) Ins
 
 func (x x86InstrumentFactory) NewGpuUtilInstrument(devices map[int]string) Instrument {
 	return X86GpuUtilInstrument{devices}
+}
+
+func (d defaultInstrumentFactory) NewGpuPowerInstrument(devices map[int]string) Instrument {
+	return DefaultGpuPowerInstrument{}
+}
+
+func (x x86InstrumentFactory) NewGpuPowerInstrument(devices map[int]string) Instrument {
+	return X86GpuPowerInstrument{devices}
 }

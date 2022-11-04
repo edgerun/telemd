@@ -77,6 +77,8 @@ The default telemd runs the following instruments:
   * On Jetson Boards we read from `/sys/devices/gpu.0/load`
 * `gpu_util_memory` GPU memory utilization of the last second in `%`
   * This is only available on normal Nvidia GPUs, see [nvmlDeviceGetUtilizationRates](https://docs.nvidia.com/deploy/nvml-api/group__nvmlDeviceQueries.html#group__nvmlDeviceQueries_1g540824faa6cef45500e0d1dc2f50b321)
+* `gpu_power` GPU power usage in milliwats
+  *  This is only available on normal Nvidia GPUs, see [nvmlDeviceGetPowerUsage](https://docs.nvidia.com/deploy/nvml-api/group__nvmlDeviceQueries.html#group__nvmlDeviceQueries_1g7ef7dff0ff14238d08a19ad7fb23fc87)
   
 ### GPU support
 
@@ -176,7 +178,8 @@ Execute, or run (`./scripts/docker-run.sh`):
     -v /sys:/sys:ro \
     -v /proc:/proc_host \
     -e telemd_instruments_disable="kubernetes_cgrp_cpu kubernetes_cgrp_blkio kubernetes_cgrp_memory kubernetes_cgrp_net" \
-    -e telemd_proc_mount=/proc_host
+    -e telemd_proc_mount=/proc_host \
+    --gpus all
     edgerun/telemd
 
 ### GPU

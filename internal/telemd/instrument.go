@@ -42,6 +42,7 @@ type InstrumentFactory interface {
 	NewWifiSignalInstrument(string) Instrument
 	NewGpuFrequencyInstrument(map[int]string) Instrument
 	NewGpuUtilInstrument(map[int]string) Instrument
+	NewGpuPowerInstrument(map[int]string) Instrument
 }
 
 type CpuInfoFrequencyInstrument struct{}

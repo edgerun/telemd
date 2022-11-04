@@ -1,3 +1,4 @@
+//go:build !GPU_SUPPORT
 // +build !GPU_SUPPORT
 
 package telemd
@@ -27,5 +28,17 @@ func (a arm64InstrumentFactory) NewGpuUtilInstrument(map[int]string) Instrument 
 }
 
 func (x x86InstrumentFactory) NewGpuUtilInstrument(map[int]string) Instrument {
+	return DisabledInstrument
+}
+
+func (d defaultInstrumentFactory) NewGpuPowerInstrument(map[int]string) Instrument {
+	return DisabledInstrument
+}
+
+func (x x86InstrumentFactory) NewGpuPowerInstrument(map[int]string) Instrument {
+	return DisabledInstrument
+}
+
+func (a arm64InstrumentFactory) NewGpuPowerInstrument(map[int]string) Instrument {
 	return DisabledInstrument
 }
