@@ -66,6 +66,12 @@ func (daemon *Daemon) initInstruments(factory InstrumentFactory) {
 		}
 	}
 
+	if len(cfg.Instruments.Ping.Host) > 0 {
+		host := cfg.Instruments.Ping.Host
+		count := cfg.Instruments.Ping.Count
+		instruments["ping"] = factory.NewPingInstrument(host, count)
+	}
+
 	if cfg.Instruments.Disable != nil && (len(cfg.Instruments.Disable) > 0) {
 		log.Println("disabling instruments", cfg.Instruments.Disable)
 		for _, instr := range cfg.Instruments.Disable {

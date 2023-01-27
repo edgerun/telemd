@@ -3,6 +3,7 @@ package telemd
 import (
 	"bufio"
 	"github.com/edgerun/telemd/internal/telem"
+	probing "github.com/prometheus-community/pro-bing"
 	"log"
 	"os"
 	"path/filepath"
@@ -40,6 +41,7 @@ type InstrumentFactory interface {
 	NewWifiTxBitrateInstrument(string) Instrument
 	NewWifiRxBitrateInstrument(string) Instrument
 	NewWifiSignalInstrument(string) Instrument
+	NewPingInstrument(string, int) Instrument
 }
 
 type CpuInfoFrequencyInstrument struct{}
@@ -59,6 +61,11 @@ type WifiTxBitrateInstrument struct {
 }
 type WifiSignalInstrument struct {
 	Device string
+}
+type PingInstrument struct {
+	Host      string
+	PingCount int
+	Pinger    *probing.Pinger
 }
 type NetworkDataRateInstrument struct {
 	Devices []string
@@ -344,6 +351,17 @@ func (i WifiSignalInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
 			channel.Put(telem.NewTelemetry("signal"+telem.TopicSeparator+i.Device, value))
 		}
 	}
+}
+
+func (i PingInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
+	err := i.Pinger.Run() // Blocks until finished.
+	if err != nil {
+		panic(err)
+	}
+	stats := i.Pinger.Statistics()
+	// convert microseconds into milliseconds
+	rtt := float64(stats.AvgRtt.Microseconds()) / float64(1000)
+	channel.Put(telem.NewTelemetry("ping_avg"+telem.TopicSeparator+i.Host, rtt))
 }
 
 func (DockerCgroupv1CpuInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
@@ -977,6 +995,19 @@ func (d defaultInstrumentFactory) NewDockerCgroupBlkioInstrument() Instrument {
 		return DockerCgroupv1BlkioInstrument{}
 	} else {
 		return DockerCgroupv2BlkioInstrument{}
+	}
+}
+
+func (d defaultInstrumentFactory) NewPingInstrument(host string, count int) Instrument {
+	pinger, err := probing.NewPinger(host)
+	if err != nil {
+		panic(err)
+	}
+	pinger.Count = count
+	return &PingInstrument{
+		Host:      host,
+		PingCount: count,
+		Pinger:    pinger,
 	}
 }
 

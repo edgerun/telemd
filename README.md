@@ -56,6 +56,7 @@ The default telemd runs the following instruments:
 * `tx_bitrate` the tx bitrate reported by `iw`. Only available for wireless interfaces
 * `rx_bitrate` the rx bitrate reported by `iw`. Only available for wireless interfaces
 * `signal` the signal strength reported by `iw`. Only available for wireless interfaces
+* `ping_avg` the average round-trip time in milliseconds of ping to a specified host. See daemon parameters for more information. **This instrument is disabled, if no parameter is set.**
 * `psi_cpu` host's CPU [pressure](https://www.kernel.org/doc/html/latest/accounting/psi.html#psi)
 * `psi_io` host's I/O [pressure](https://www.kernel.org/doc/html/latest/accounting/psi.html#psi)
 * `psi_memory` host's memory [pressure](https://www.kernel.org/doc/html/latest/accounting/psi.html#psi)
@@ -109,19 +110,20 @@ for commands. Currently, telemd supports the following commands:
 
 The `telemd` command allows the following parameters via environment variables.
 
-| Variable | Default | Description |
-|---|---|---|
-| `telemd_nodename`     | `$HOST`       | The node name determines the value for `<nodename>` in the topics |
-| `telemd_redis_host`   | `localhost`   | The redis host to connect to |
-| `telemd_redis_port`   | `6379`        | The redis port to connect to |
-| `telemd_redis_url`    |               | Can be used to specify the redis URL (e.g., `redis://localhost:1234`). Overwrites anything set to `telemd_redis_host`.
-| `telemd_net_devices`  | all           | A list of network devices to be monitored, e.g. `wlan0 eth0`. Monitors all devices per default |
-| `telemd_disk_devices` | all           | A list of block devices to be monitored, e.g. `sda sdc sdd0`. Monitors all devices per default |
-| `telemd_period_<instrument>` |        | A duration string (`1s`, `500ms`, ...) that indicates how often the given `instrument` should be probed |
-| `telemd_instruments_enable`  | all    | A space seperated list of instruments to use (e.g. `"cpu freq"`), these will be the only instruments that are run (mutex with disable) |
-| `telemd_instruments_disable` | none   | A space seperated list of instruments to disable, all instruments will run except for these (mutex with enable, preferred if both are set) |
-| `telemd_proc_mount`    | `/proc`      | Tells telemd where the `/proc` folder is mounted into the container. |
-
+| Variable                     | Default     | Description                                                                                                                                |
+|------------------------------|-------------|--------------------------------------------------------------------------------------------------------------------------------------------|
+| `telemd_nodename`            | `$HOST`     | The node name determines the value for `<nodename>` in the topics                                                                          |
+| `telemd_redis_host`          | `localhost` | The redis host to connect to                                                                                                               |
+| `telemd_redis_port`          | `6379`      | The redis port to connect to                                                                                                               |
+| `telemd_redis_url`           |             | Can be used to specify the redis URL (e.g., `redis://localhost:1234`). Overwrites anything set to `telemd_redis_host`.                     |
+| `telemd_net_devices`         | all         | A list of network devices to be monitored, e.g. `wlan0 eth0`. Monitors all devices per default                                             |
+| `telemd_disk_devices`        | all         | A list of block devices to be monitored, e.g. `sda sdc sdd0`. Monitors all devices per default                                             |
+| `telemd_period_<instrument>` |             | A duration string (`1s`, `500ms`, ...) that indicates how often the given `instrument` should be probed                                    |
+| `telemd_instruments_enable`  | all         | A space seperated list of instruments to use (e.g. `"cpu freq"`), these will be the only instruments that are run (mutex with disable)     |
+| `telemd_instruments_disable` | none        | A space seperated list of instruments to disable, all instruments will run except for these (mutex with enable, preferred if both are set) |
+| `telemd_proc_mount`          | `/proc`     | Tells telemd where the `/proc` folder is mounted into the container.                                                                       |
+| `telemd_ping_host`           | N/A         | Tells the `ping` instrument which host should be pinged.                                                                                   |                                                                                  |                                                                               |
+| `telemd_ping_count`          | 1           | How many pings are sent each time the instrument runs.                                                                                     | 
 #### Configuration
 
 To allow the global configuration of a fleet of `telemd` instances, telemd can also be configured via ini files.

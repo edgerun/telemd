@@ -30,6 +30,10 @@ type Config struct {
 		Disk struct {
 			Devices []string
 		}
+		Ping struct {
+			Host  string
+			Count int
+		}
 	}
 	Mounts struct {
 		Proc string
@@ -73,6 +77,7 @@ func NewDefaultConfig() *Config {
 		"tx_bitrate":             1 * time.Second,
 		"rx_bitrate":             1 * time.Second,
 		"signal":                 1 * time.Second,
+		"ping":                   1 * time.Second,
 		"docker_cgrp_cpu":        1 * time.Second,
 		"docker_cgrp_blkio":      1 * time.Second,
 		"docker_cgrp_net":        1 * time.Second,
@@ -135,6 +140,17 @@ func (cfg *Config) LoadFromEnvironment(env env.Environment) {
 		} else if err != nil {
 			log.Fatal("Error reading "+key, err)
 		}
+	}
+
+	if host, ok := env.Lookup("telemd_ping_host"); ok {
+		count := 1
+		if field, ok, err := env.LookupInt("telemd_ping_count"); err == nil && ok {
+			count = int(field)
+		}
+		cfg.Instruments.Ping.Count = count
+		cfg.Instruments.Ping.Host = host
+	} else {
+		cfg.Instruments.Ping.Host = ""
 	}
 
 	if fields, ok, err := env.LookupFields("telemd_instruments_enable"); err == nil && ok {
