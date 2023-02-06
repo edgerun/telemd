@@ -65,7 +65,6 @@ type WifiSignalInstrument struct {
 type PingInstrument struct {
 	Host      string
 	PingCount int
-	Pinger    *probing.Pinger
 }
 type NetworkDataRateInstrument struct {
 	Devices []string
@@ -354,11 +353,17 @@ func (i WifiSignalInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
 }
 
 func (i PingInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
-	err := i.Pinger.Run() // Blocks until finished.
+	// TODO: this might be in
+	pinger, err := probing.NewPinger(i.Host)
+	pinger.Count = i.PingCount
 	if err != nil {
 		panic(err)
 	}
-	stats := i.Pinger.Statistics()
+	err = pinger.Run() // Blocks until finished.
+	if err != nil {
+		panic(err)
+	}
+	stats := pinger.Statistics()
 	// convert microseconds into milliseconds
 	rtt := float64(stats.AvgRtt.Microseconds()) / float64(1000)
 	channel.Put(telem.NewTelemetry("ping_avg"+telem.TopicSeparator+i.Host, rtt))
@@ -999,15 +1004,9 @@ func (d defaultInstrumentFactory) NewDockerCgroupBlkioInstrument() Instrument {
 }
 
 func (d defaultInstrumentFactory) NewPingInstrument(host string, count int) Instrument {
-	pinger, err := probing.NewPinger(host)
-	if err != nil {
-		panic(err)
-	}
-	pinger.Count = count
 	return &PingInstrument{
 		Host:      host,
 		PingCount: count,
-		Pinger:    pinger,
 	}
 }
 
