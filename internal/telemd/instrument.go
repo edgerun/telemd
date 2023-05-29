@@ -82,9 +82,9 @@ type DockerCgroupv2NetworkInstrument struct {
 type DockerCgroupv1MemoryInstrument struct{}
 type DockerCgroupv2MemoryInstrument struct{}
 
-type KubernetesCgroupCpuInstrument struct{}
-type KubernetesCgroupBlkioInstrument struct{}
-type KuberenetesCgroupMemoryInstrument struct{}
+type KubernetesCgroupv1CpuInstrument struct{}
+type KubernetesCgroupv1BlkioInstrument struct{}
+type KuberenetesCgroupv1MemoryInstrument struct{}
 type KubernetesCgroupv1NetworkInstrument struct {
 	pids      map[string]string
 	procMount string
@@ -465,7 +465,7 @@ func fetchKubernetesContainerDirs(kubepodDir string) []string {
 	return containerDirs
 }
 
-func (KubernetesCgroupCpuInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
+func (KubernetesCgroupv1CpuInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
 	var kubepodRootDir = "/sys/fs/cgroup/cpuacct/kubepods"
 	var bestEffortDir = kubepodRootDir + "/" + "besteffort"
 	var burstableDir = kubepodRootDir + "/" + "burstable"
@@ -827,7 +827,7 @@ func (k DockerCgroupv2MemoryInstrument) MeasureAndReport(ch telem.TelemetryChann
 	}
 }
 
-func (KubernetesCgroupBlkioInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
+func (KubernetesCgroupv1BlkioInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
 	var kubepodRootDir = "/sys/fs/cgroup/blkio/kubepods"
 	var bestEffortDir = kubepodRootDir + "/" + "besteffort"
 	var burstableDir = kubepodRootDir + "/" + "burstable"
@@ -875,7 +875,7 @@ func readCgroupv2Memory(containerDir string) (int64, error) {
 	return value, nil
 }
 
-func (k KuberenetesCgroupMemoryInstrument) MeasureAndReport(ch telem.TelemetryChannel) {
+func (k KuberenetesCgroupv1MemoryInstrument) MeasureAndReport(ch telem.TelemetryChannel) {
 	var kubepodRootDir = "/sys/fs/cgroup/memory/kubepods"
 	var bestEffortDir = kubepodRootDir + "/" + "besteffort"
 	var burstableDir = kubepodRootDir + "/" + "burstable"
@@ -968,7 +968,7 @@ func (d defaultInstrumentFactory) NewDockerCgroupCpuInstrument() Instrument {
 }
 
 func (d defaultInstrumentFactory) NewKubernetesCgroupCpuInstrument() Instrument {
-	return KubernetesCgroupCpuInstrument{}
+	return KubernetesCgroupv1CpuInstrument{}
 }
 
 func (d defaultInstrumentFactory) NewDockerCgroupBlkioInstrument() Instrument {
@@ -1003,11 +1003,11 @@ func (d defaultInstrumentFactory) NewDockerCgroupNetworkInstrument(procMount str
 }
 
 func (d defaultInstrumentFactory) NewKubernetesCgroupBlkioInstrument() Instrument {
-	return KubernetesCgroupBlkioInstrument{}
+	return KubernetesCgroupv1BlkioInstrument{}
 }
 
 func (d defaultInstrumentFactory) NewKubernetesCgroupMemoryInstrument() Instrument {
-	return KuberenetesCgroupMemoryInstrument{}
+	return KuberenetesCgroupv1MemoryInstrument{}
 }
 func (d defaultInstrumentFactory) NewKubernetesCgroupNetInstrument(procMount string) Instrument {
 	pidMap, err := containerProcessIds(procMount)
