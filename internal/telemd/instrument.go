@@ -685,7 +685,7 @@ func (c KubernetesCgroupv2NetworkInstrument) MeasureAndReport(channel telem.Tele
 						rx += irx
 						tx += itx
 					}
-					channel.Put(telem.NewTelemetry("docker_cgrp_net/"+containerId, float64(rx+tx)))
+					channel.Put(telem.NewTelemetry("kubernetes_cgrp_net/"+containerId, float64(rx+tx)))
 				}(containerDir)
 			}
 		}(kubepodDir)

@@ -279,7 +279,6 @@ func getContainerId(pid string, procMount string) (string, error) {
 		} else {
 			r, _ := regexp.Compile("[0-9a-zA-Z]{32}")
 			containerId := r.FindString(line)
-			log.Println(containerId)
 			if len(containerId) > 0 {
 				return containerId, nil
 			}
@@ -292,20 +291,19 @@ func getContainerId(pid string, procMount string) (string, error) {
 func containerProcessIds(procMount string) (map[string]string, error) {
 	// get all PIDs from /proc
 	pids, err := allPids(procMount)
-	log.Println(pids)
+
 	if err != nil {
 		return nil, err
 	}
 
 	pidMap := make(map[string]string, 0)
 	for _, pid := range pids {
-		containerId, err := getContainerId("2449", procMount)
+		containerId, err := getContainerId(pid, procMount)
 		if err == nil {
 			if _, ok := pidMap[containerId]; !ok {
 				pidMap[containerId] = pid
 			}
 		}
-		break
 	}
 	return pidMap, nil
 }
