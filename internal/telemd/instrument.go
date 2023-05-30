@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -83,6 +84,7 @@ type DockerCgroupv1MemoryInstrument struct{}
 type DockerCgroupv2MemoryInstrument struct{}
 
 type KubernetesCgroupv1CpuInstrument struct{}
+type KubernetesCgroupv2CpuInstrument struct{}
 type KubernetesCgroupv1BlkioInstrument struct{}
 type KuberenetesCgroupv1MemoryInstrument struct{}
 type KubernetesCgroupv1NetworkInstrument struct {
@@ -367,8 +369,7 @@ func (DockerCgroupv1CpuInstrument) MeasureAndReport(channel telem.TelemetryChann
 	}
 }
 
-func listCgroupv2Folders(prefix string) (error, []string) {
-	dirname := "/sys/fs/cgroup/system.slice"
+func listCgroupv2Folders(prefix string, dirname string) (error, []string) {
 	dirs, err := listFilterDir(dirname, func(info os.FileInfo) bool {
 		return info.IsDir() && info.Name() != "." && info.Name() != ".." && strings.HasPrefix(info.Name(), prefix)
 	})
@@ -384,7 +385,7 @@ func (DockerCgroupv2CpuInstrument) MeasureAndReport(channel telem.TelemetryChann
 	dirname := "/sys/fs/cgroup/system.slice"
 	prefix := "docker-"
 
-	err, dirs := listCgroupv2Folders(prefix)
+	err, dirs := listCgroupv2Folders(prefix, dirname)
 	if err != nil {
 		log.Println(err)
 	}
@@ -444,7 +445,8 @@ func fetchKubernetesContainerDirs(kubepodDir string) []string {
 
 	getContainers := func(podDir string) []string {
 		containers, err := listFilterDir(podDir, func(info os.FileInfo) bool {
-			return info.IsDir() && len(info.Name()) == 64
+			// 64 length -> cgroupv1 container folder name length, 85 length -> cgroupv2 container folder name length
+			return info.IsDir() && (len(info.Name()) == 64 || len(info.Name()) == 85)
 		})
 
 		if err != nil {
@@ -463,6 +465,32 @@ func fetchKubernetesContainerDirs(kubepodDir string) []string {
 		}
 	}
 	return containerDirs
+}
+
+func (KubernetesCgroupv2CpuInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
+	// /sys/fs/cgroup/kubepods.slice/kubepods-besteffort.slice/kubepods-besteffort-pod6226f8c8_a5fa_4684_b5c2_c758e052c22e.slice/cpu.stat
+	burstableDirname := "/sys/fs/cgroup/kubepods.slice/kubepods-burstable.slice"
+	bestEffortDirname := "/sys/fs/cgroup/kubepods.slice/kubepods-besteffort.slice"
+	guaranteedDirname := "/sys/fs/cgroup/kubepods.slice/kubepods-guaranteed.slice"
+	r, _ := regexp.Compile("[0-9a-zA-Z]{32}")
+
+	for _, kubepodDir := range [3]string{bestEffortDirname, burstableDirname, guaranteedDirname} {
+		go func(kubepodDir string) {
+			for _, containerDir := range fetchKubernetesContainerDirs(kubepodDir) {
+				go func(containerDir string) {
+					containerId := r.FindString(containerDir)
+					containerFolder := containerDir
+					value, err := readCgroupv2Cpu(containerFolder)
+					if err == nil {
+						channel.Put(telem.NewTelemetry("kubernetes_cgrp_cpu/"+containerId, float64(value)))
+					} else {
+						log.Println("error reading data file", containerFolder, err)
+					}
+				}(containerDir)
+			}
+		}(kubepodDir)
+
+	}
 }
 
 func (KubernetesCgroupv1CpuInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
@@ -605,9 +633,10 @@ func (c KubernetesCgroupv1NetworkInstrument) MeasureAndReport(channel telem.Tele
 }
 
 func (c *DockerCgroupv2NetworkInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
+	dirname := "/sys/fs/cgroup/system.slice"
 	prefix := "docker-"
 
-	err, dirs := listCgroupv2Folders(prefix)
+	err, dirs := listCgroupv2Folders(prefix, dirname)
 	if err != nil {
 		log.Println("error measuring docker cgroup blkio", err)
 		return
@@ -783,7 +812,7 @@ func (DockerCgroupv2BlkioInstrument) MeasureAndReport(channel telem.TelemetryCha
 	dirname := "/sys/fs/cgroup/system.slice"
 	prefix := "docker-"
 
-	err, dirs := listCgroupv2Folders(prefix)
+	err, dirs := listCgroupv2Folders(prefix, dirname)
 	if err != nil {
 		log.Println("error measuring docker cgroup blkio", err)
 		return
@@ -807,7 +836,7 @@ func (k DockerCgroupv2MemoryInstrument) MeasureAndReport(ch telem.TelemetryChann
 	dirname := "/sys/fs/cgroup/system.slice"
 	prefix := "docker-"
 
-	err, dirs := listCgroupv2Folders(prefix)
+	err, dirs := listCgroupv2Folders(prefix, dirname)
 	if err != nil {
 		log.Println("error measuring docker cgroup blkio", err)
 		return
@@ -968,7 +997,13 @@ func (d defaultInstrumentFactory) NewDockerCgroupCpuInstrument() Instrument {
 }
 
 func (d defaultInstrumentFactory) NewKubernetesCgroupCpuInstrument() Instrument {
-	return KubernetesCgroupv1CpuInstrument{}
+	cgroup := checkCgroup()
+	if cgroup == "v1" {
+		return KubernetesCgroupv1CpuInstrument{}
+	} else {
+		return KubernetesCgroupv2CpuInstrument{}
+	}
+
 }
 
 func (d defaultInstrumentFactory) NewDockerCgroupBlkioInstrument() Instrument {
