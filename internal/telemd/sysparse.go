@@ -13,16 +13,18 @@ import (
 
 // Reads the statistics from https://www.kernel.org/doc/Documentation/block/stat.txt
 // and returns an array where the indices correspond to the following values:
-//  0   read I/Os       requests      number of read I/Os processed
-//  1   read merges     requests      number of read I/Os merged with in-queue I/O
-//  2   read sectors    sectors       number of sectors read
-//  3   read ticks      milliseconds  total wait time for read requests
-//  4   write I/Os      requests      number of write I/Os processed
-//  5   write merges    requests      number of write I/Os merged with in-queue I/O
-//  6   write sectors   sectors       number of sectors written
-//  7   write ticks     milliseconds  total wait time for write requests
-//  8   in_flight       requests      number of I/Os currently in flight
-//  9   io_ticks        milliseconds  total time this block device has been active
+//
+//	0   read I/Os       requests      number of read I/Os processed
+//	1   read merges     requests      number of read I/Os merged with in-queue I/O
+//	2   read sectors    sectors       number of sectors read
+//	3   read ticks      milliseconds  total wait time for read requests
+//	4   write I/Os      requests      number of write I/Os processed
+//	5   write merges    requests      number of write I/Os merged with in-queue I/O
+//	6   write sectors   sectors       number of sectors written
+//	7   write ticks     milliseconds  total wait time for write requests
+//	8   in_flight       requests      number of I/Os currently in flight
+//	9   io_ticks        milliseconds  total time this block device has been active
+//
 // 10   time_in_queue   milliseconds  total wait time for all requests
 // 11   discard I/Os    requests      number of discard I/Os processed
 // 12   discard merges  requests      number of discard I/Os merged with in-queue I/O
@@ -192,9 +194,11 @@ func bootTime() (int64, error) {
 
 // thomas@om ~ % cat /proc/114204/net/dev
 // Inter-|   Receive                                                |  Transmit
-//  face |bytes    packets errs drop fifo frame compressed multicast|bytes    packets errs drop fifo colls carrier compressed
-//   eth0:    6391      29    0    0    0     0          0         0        0       0    0    0    0     0       0          0
-//     lo:       0       0    0    0    0     0          0         0        0       0    0    0    0     0       0          0
+//
+//	face |bytes    packets errs drop fifo frame compressed multicast|bytes    packets errs drop fifo colls carrier compressed
+//	 eth0:    6391      29    0    0    0     0          0         0        0       0    0    0    0     0       0          0
+//	   lo:       0       0    0    0    0     0          0         0        0       0    0    0    0     0       0          0
+//
 // returns the sum over all network devices (rx, tx)
 func readTotalProcessNetworkStats(pid string, procMount string) (rx map[string]int64, tx map[string]int64, err error) {
 	path := procMount + "/" + pid + "/net/dev"
@@ -248,6 +252,7 @@ func getContainerId(pid string, procMount string) (string, error) {
 	// 11:freezer:/docker/dc65d1e5672961e7191260dec3dd532ad346719ea3ae23035e3b560867bd1183
 	file, err := os.Open(procMount + "/" + pid + "/cgroup")
 	if err != nil {
+		log.Println(err)
 		return "", err
 	}
 	defer file.Close()
@@ -267,10 +272,18 @@ func getContainerId(pid string, procMount string) (string, error) {
 				// cgroup v1
 				return split, nil
 			}
-		} else if strings.Contains(line, "kubepods") {
+		} else if strings.Contains(line, "kubepods") && !strings.Contains(line, "cri-containerd") {
 			// kubernetes
 			// freezer:/kubepods/besteffort/podae778fdf-394c-4356-9625-ea50666783b1/2cc54a6877a50da0b6a2a5340dd1e8c5707a1d7d4b363e03b7cde76d2569f0c0
 			return strings.Split(line, "/")[4], nil
+		} else {
+			r, _ := regexp.Compile("[0-9a-zA-Z]{32}")
+			containerId := r.FindString(line)
+			log.Println(containerId)
+			if len(containerId) > 0 {
+				return containerId, nil
+			}
+
 		}
 	}
 	return "", errors.New("Did not find container for PID " + pid)
@@ -279,19 +292,20 @@ func getContainerId(pid string, procMount string) (string, error) {
 func containerProcessIds(procMount string) (map[string]string, error) {
 	// get all PIDs from /proc
 	pids, err := allPids(procMount)
-
+	log.Println(pids)
 	if err != nil {
 		return nil, err
 	}
 
 	pidMap := make(map[string]string, 0)
 	for _, pid := range pids {
-		containerId, err := getContainerId(pid, procMount)
+		containerId, err := getContainerId("2449", procMount)
 		if err == nil {
 			if _, ok := pidMap[containerId]; !ok {
 				pidMap[containerId] = pid
 			}
 		}
+		break
 	}
 	return pidMap, nil
 }

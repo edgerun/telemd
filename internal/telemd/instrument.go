@@ -91,6 +91,10 @@ type KubernetesCgroupv1NetworkInstrument struct {
 	pids      map[string]string
 	procMount string
 }
+type KubernetesCgroupv2NetworkInstrument struct {
+	pids      map[string]string
+	procMount string
+}
 
 func (CpuUtilInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
 	then := readCpuUtil()
@@ -632,6 +636,63 @@ func (c KubernetesCgroupv1NetworkInstrument) MeasureAndReport(channel telem.Tele
 
 }
 
+func (c KubernetesCgroupv2NetworkInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
+	burstableDirname := "/sys/fs/cgroup/kubepods.slice/kubepods-burstable.slice"
+	bestEffortDirname := "/sys/fs/cgroup/kubepods.slice/kubepods-besteffort.slice"
+	guaranteedDirname := "/sys/fs/cgroup/kubepods.slice/kubepods-guaranteed.slice"
+	r, _ := regexp.Compile("[0-9a-zA-Z]{32}")
+
+	for _, kubepodDir := range [3]string{bestEffortDirname, burstableDirname, guaranteedDirname} {
+		go func(kubepodDir string) {
+			for _, containerDir := range fetchKubernetesContainerDirs(kubepodDir) {
+				go func(containerDir string) {
+					containerId := r.FindString(containerDir)
+					pid, ok := c.pids[containerId]
+
+					if !ok {
+						// refresh pids
+						pids, err := containerProcessIds(c.procMount)
+						if err != nil {
+							log.Println("unable to get container process ids", err)
+							return
+						}
+						c.pids = pids
+
+						pid, ok = c.pids[containerId]
+						if !ok {
+							log.Println("could not get pid of container after refresh", containerId)
+							return
+						}
+					}
+
+					rxValues, txValues, err := readTotalProcessNetworkStats(pid, c.procMount)
+					if err != nil {
+						if os.IsNotExist(err) {
+							delete(c.pids, containerId) // delete now and wait for next iteration to refresh
+						} else {
+							log.Println("error parsing network stats of pid", pid, err, err)
+						}
+						return
+					}
+
+					rx := int64(0)
+					tx := int64(0)
+					for device, irx := range rxValues {
+						itx := txValues[device]
+						channel.Put(telem.NewTelemetry("kubernetes_cgrp_net/"+containerId+"/"+device, float64(irx+itx)))
+						channel.Put(telem.NewTelemetry("kubernetes_cgrp_net/"+containerId+"/"+device+"/rx", float64(irx)))
+						channel.Put(telem.NewTelemetry("kubernetes_cgrp_net/"+containerId+"/"+device+"/tx", float64(itx)))
+						rx += irx
+						tx += itx
+					}
+					channel.Put(telem.NewTelemetry("docker_cgrp_net/"+containerId, float64(rx+tx)))
+				}(containerDir)
+			}
+		}(kubepodDir)
+
+	}
+}
+
 func (c *DockerCgroupv2NetworkInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
 	dirname := "/sys/fs/cgroup/system.slice"
 	prefix := "docker-"
@@ -1051,9 +1112,18 @@ func (d defaultInstrumentFactory) NewKubernetesCgroupNetInstrument(procMount str
 		log.Println("unable to get process ids of containers", err)
 	}
 
-	return KubernetesCgroupv1NetworkInstrument{
-		pids:      pidMap,
-		procMount: procMount,
+	cgroup := checkCgroup()
+
+	if cgroup == "v1" {
+		return KubernetesCgroupv1NetworkInstrument{
+			pids:      pidMap,
+			procMount: procMount,
+		}
+	} else {
+		return KubernetesCgroupv2NetworkInstrument{
+			pids:      pidMap,
+			procMount: procMount,
+		}
 	}
 }
 
