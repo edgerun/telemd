@@ -86,6 +86,7 @@ type DockerCgroupv2MemoryInstrument struct{}
 type KubernetesCgroupv1CpuInstrument struct{}
 type KubernetesCgroupv2CpuInstrument struct{}
 type KubernetesCgroupv1BlkioInstrument struct{}
+type KubernetesCgroupv2BlkioInstrument struct{}
 type KuberenetesCgroupv1MemoryInstrument struct{}
 type KubernetesCgroupv1NetworkInstrument struct {
 	pids      map[string]string
@@ -936,6 +937,29 @@ func (KubernetesCgroupv1BlkioInstrument) MeasureAndReport(channel telem.Telemetr
 	}
 }
 
+func (KubernetesCgroupv2BlkioInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
+	burstableDirname := "/sys/fs/cgroup/kubepods.slice/kubepods-burstable.slice"
+	bestEffortDirname := "/sys/fs/cgroup/kubepods.slice/kubepods-besteffort.slice"
+	guaranteedDirname := "/sys/fs/cgroup/kubepods.slice/kubepods-guaranteed.slice"
+	r, _ := regexp.Compile("[0-9a-zA-Z]{32}")
+
+	for _, kubepodDir := range [3]string{bestEffortDirname, burstableDirname, guaranteedDirname} {
+		go func(kubepodDir string) {
+			for _, containerDir := range fetchKubernetesContainerDirs(kubepodDir) {
+				go func(containerDir string) {
+					containerId := r.FindString(containerDir)
+					value, err := readCgroupv2Blkio(containerDir)
+					if err == nil {
+						channel.Put(telem.NewTelemetry("kubernetes_cgrp_blkio/"+containerId, float64(value)))
+					} else {
+						log.Println("error reading data file", containerId, err)
+					}
+				}(containerDir)
+			}
+		}(kubepodDir)
+	}
+}
+
 func readMemory(path string) (val int64, err error) {
 	visitorErr := visitLines(path, func(line string) bool {
 		val, err = strconv.ParseInt(line, 10, 64)
@@ -1099,7 +1123,13 @@ func (d defaultInstrumentFactory) NewDockerCgroupNetworkInstrument(procMount str
 }
 
 func (d defaultInstrumentFactory) NewKubernetesCgroupBlkioInstrument() Instrument {
-	return KubernetesCgroupv1BlkioInstrument{}
+	cgroup := checkCgroup()
+	if cgroup == "v1" {
+		return KubernetesCgroupv1BlkioInstrument{}
+	} else {
+		return KubernetesCgroupv2BlkioInstrument{}
+	}
+
 }
 
 func (d defaultInstrumentFactory) NewKubernetesCgroupMemoryInstrument() Instrument {
