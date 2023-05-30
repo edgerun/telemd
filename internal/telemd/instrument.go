@@ -88,6 +88,7 @@ type KubernetesCgroupv2CpuInstrument struct{}
 type KubernetesCgroupv1BlkioInstrument struct{}
 type KubernetesCgroupv2BlkioInstrument struct{}
 type KuberenetesCgroupv1MemoryInstrument struct{}
+type KubernetesCgroupv2MemoryInstrument struct{}
 type KubernetesCgroupv1NetworkInstrument struct {
 	pids      map[string]string
 	procMount string
@@ -1008,6 +1009,29 @@ func (k KuberenetesCgroupv1MemoryInstrument) MeasureAndReport(ch telem.Telemetry
 	}
 }
 
+func (k KubernetesCgroupv2MemoryInstrument) MeasureAndReport(ch telem.TelemetryChannel) {
+	burstableDirname := "/sys/fs/cgroup/kubepods.slice/kubepods-burstable.slice"
+	bestEffortDirname := "/sys/fs/cgroup/kubepods.slice/kubepods-besteffort.slice"
+	guaranteedDirname := "/sys/fs/cgroup/kubepods.slice/kubepods-guaranteed.slice"
+	r, _ := regexp.Compile("[0-9a-zA-Z]{32}")
+
+	for _, kubepodDir := range [3]string{bestEffortDirname, burstableDirname, guaranteedDirname} {
+		go func(kubepodDir string) {
+			for _, containerDir := range fetchKubernetesContainerDirs(kubepodDir) {
+				go func(containerDir string) {
+					containerId := r.FindString(containerDir)
+					value, err := readCgroupv2Memory(containerDir)
+					if err == nil {
+						ch.Put(telem.NewTelemetry("kubernetes_cgrp_memory/"+containerId, float64(value)))
+					} else {
+						log.Println("error reading data file", containerId, err)
+					}
+				}(containerDir)
+			}
+		}(kubepodDir)
+	}
+}
+
 type defaultInstrumentFactory struct {
 }
 
@@ -1133,7 +1157,12 @@ func (d defaultInstrumentFactory) NewKubernetesCgroupBlkioInstrument() Instrumen
 }
 
 func (d defaultInstrumentFactory) NewKubernetesCgroupMemoryInstrument() Instrument {
-	return KuberenetesCgroupv1MemoryInstrument{}
+	cgroup := checkCgroup()
+	if cgroup == "v1" {
+		return KuberenetesCgroupv1MemoryInstrument{}
+	} else {
+		return KubernetesCgroupv2MemoryInstrument{}
+	}
 }
 func (d defaultInstrumentFactory) NewKubernetesCgroupNetInstrument(procMount string) Instrument {
 	pidMap, err := containerProcessIds(procMount)
