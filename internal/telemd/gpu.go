@@ -24,35 +24,47 @@ func x86Gpu() ([]string, error) {
 }
 
 func readTegraChipId() (string, error) {
-	id, err := readFirstLine("/sys/module/tegra_fuse/parameters/tegra_chip_id")
+	//id, err := readFirstLine("/sys/module/tegra_fuse/parameters/tegra_chip_id")
+	//if err != nil {
+	//	return "", err
+	//}
+	//return id, nil
+	return "", nil
+}
+
+func readJetsonDeviceModel() (string, error) {
+	model, err := readFirstLine("/proc/device-tree/model")
 	if err != nil {
 		return "", err
 	}
-	return id, nil
+	return model, nil
 }
 
 // Returns the current frequency in Hz
 // https://docs.nvidia.com/jetson/archives/l4t-archived/l4t-3231/index.html#page/Tegra%2520Linux%2520Driver%2520Package%2520Development%2520Guide%2Fpower_management_tx2_32.html%23wwpID0E0GD0HA
 func readJetsonFrequency() (float64, error) {
-	id, err := readTegraChipId()
 
+	model, err := readJetsonDeviceModel()
 	if err != nil {
 		return -1, err
 	}
 
 	var folder string
 
-	if id == "24" {
+	if model == "quill" || strings.Contains(model, "TX2") {
 		// tx2
 		folder = "17000000.gp10b"
-	} else if id == "25" {
+	} else if strings.Contains(model, "Xavier NX") {
 		// xavier nx
 		folder = "17000000.gv11b"
-	} else if id == "33" {
-		// nano OR tx1
+	} else if strings.Contains(model, "Nano") && !strings.Contains(model, "Orin") {
+		// nano
 		folder = "57000000.gpu"
+	} else if strings.Contains(model, "Orin") {
+		// orin nano
+		folder = "17000000.ga10b"
 	} else {
-		return -1, errors.New(fmt.Sprintf("unsupported tegra chip: %s", id))
+		return -1, errors.New(fmt.Sprintf("unsupported tegra chip: %s", model))
 	}
 
 	line, err := readFirstLine(fmt.Sprintf("/sys/devices/gpu.0/devfreq/%s/cur_freq", folder))
@@ -90,23 +102,25 @@ func arm64Gpu() ([]string, error) {
 	// all gpu devices are mounted in /sys/devices, i.e. /sys/devices/gpu.0 <- works also in container (L4T base image)
 
 	// https://forums.developer.nvidia.com/t/how-to-identify-nano/72160
-	id, err := readTegraChipId()
+	model, err := readJetsonDeviceModel()
 	if err != nil {
 		return nil, err
 	}
 
-	if id == "64" {
+	if strings.Contains(model, "TK1") {
 		return []string{"0-Jetson TK1"}, nil
-	} else if id == "33" {
+	} else if strings.Contains(model, "Nano") && !strings.Contains(model, "Orin") {
 		// according to the blog post above, jetson tx1 has the same id as tx1
 		// problem: /proc/device-tree/model not available in container
 		return []string{"0-Jetson Nano"}, nil
-	} else if id == "24" {
+	} else if model == "quill" || strings.Contains(model, "TX2") {
 		return []string{"0-Jetson TX2"}, nil
-	} else if id == "25" {
+	} else if strings.Contains(model, "Xavier NX") {
 		return []string{"0-Jetson Xavier NX"}, nil
+	} else if strings.Contains(model, "Orin") {
+		return []string{"0-Jetson Orin Nano"}, nil
 	} else {
-		return []string{}, errors.New(fmt.Sprintf("unsupported tegra chip: %s", id))
+		return []string{}, errors.New(fmt.Sprintf("unsupported tegra chip: %s", model))
 	}
 }
 
@@ -132,7 +146,7 @@ func gpuDevices() map[int]string {
 	for _, gpu := range gpus {
 		split := strings.Split(gpu, "-")
 		id, _ := strconv.Atoi(split[0])
-
+		log.Println(fmt.Sprintf("Found GPU: ", gpu))
 		devices[id] = split[1]
 	}
 
