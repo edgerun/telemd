@@ -242,6 +242,66 @@ func (instr X86GpuPowerInstrument) MeasureAndReport(channel telem.TelemetryChann
 	}
 }
 
+func (instr Arm64GpuPowerInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
+	var wg sync.WaitGroup
+	wg.Add(len(instr.Channels))
+	defer wg.Wait()
+
+	// Devices = {"VDD_IN": ["<path>/in1_input", "<path>/curr1_input"], "SOC": ...}
+
+	measureAndReport := func(id string, paths []string) {
+		defer wg.Done()
+		// Orin Nano + NX
+		if len(paths) == 2 {
+			// https://docs.nvidia.com/jetson/archives/r35.3.1/DeveloperGuide/text/SD/PlatformPowerAndPerformance/JetsonOrinNanoSeriesJetsonOrinNxSeriesAndJetsonAgxOrinSeries.html#software-based-power-consumption-modeling
+			rawVoltage, err := readFirstLine(paths[0])
+			if err != nil {
+				log.Println("Error reading voltage measurements", err)
+			}
+
+			rawCurrent, err := readFirstLine(paths[1])
+			if err != nil {
+				log.Println("Error reading current measurements", err)
+			}
+
+			voltage, err := strconv.ParseFloat(rawVoltage, 64)
+			if err != nil {
+				log.Println("Error parsing voltage", err)
+			}
+
+			current, err := strconv.ParseFloat(rawCurrent, 64)
+			if err != nil {
+				log.Println("Error parsing current", err)
+			}
+
+			milliWatts := (voltage * current) / 1000
+			channel.Put(telem.NewTelemetry("power"+telem.TopicSeparator+id, milliWatts))
+		} else if len(paths) == 1 {
+			// TX2 has a power sensor that retuns current * voltage
+			rawPower, err := readFirstLine(paths[0])
+			if err != nil {
+				log.Println("Error reading voltage measurements", err)
+			}
+
+			power, err := strconv.ParseFloat(rawPower, 64)
+			if err != nil {
+				log.Println("Error parsing voltage", err)
+			}
+
+			channel.Put(telem.NewTelemetry("power"+telem.TopicSeparator+id, power))
+
+		} else {
+			log.Fatalln("Unknown Jetson Power")
+		}
+
+	}
+
+	for id, paths := range instr.Channels {
+		measureAndReport(id, paths)
+	}
+
+}
+
 func (instr DefaultGpuUtilInstrument) MeasureAndReport(channel telem.TelemetryChannel) {
 	// per default no gpu support
 }
@@ -314,6 +374,10 @@ type X86GpuPowerInstrument struct {
 	Devices map[int]string
 }
 
+type Arm64GpuPowerInstrument struct {
+	Channels map[string][]string
+}
+
 type DefaultGpuUtilInstrument struct {
 }
 
@@ -355,4 +419,57 @@ func (d defaultInstrumentFactory) NewGpuPowerInstrument(devices map[int]string) 
 
 func (x x86InstrumentFactory) NewGpuPowerInstrument(devices map[int]string) Instrument {
 	return X86GpuPowerInstrument{devices}
+}
+
+func (x arm64InstrumentFactory) NewGpuPowerInstrument(devices map[int]string) Instrument {
+	model, err := readJetsonDeviceModel()
+	if err != nil {
+		return nil
+	}
+
+	channels := make(map[string][]string)
+
+	if model == "quill" || strings.Contains(model, "TX2") {
+		// tx2
+		devices := []string{"/sys/bus/i2c/drivers/ina3221x/0-0041/iio\\:device1/in_power0_input"}
+		channels["VDD_IN"] = devices
+
+		devices = []string{"/sys/bus/i2c/drivers/ina3221x/0-0041/iio\\:device1/in_power1_input"}
+		channels["VDD_SYS_CPU"] = devices
+
+		devices = []string{"/sys/bus/i2c/drivers/ina3221x/0-0041/iio\\:device0/in_power2_input"}
+		channels["VDD_SYS_DDR"] = devices
+
+		devices = []string{"/sys/bus/i2c/drivers/ina3221x/0-0040/iio\\:device0/in_power0_input"}
+		channels["VDD_SYS_GPU"] = devices
+
+		devices = []string{"/sys/bus/i2c/drivers/ina3221x/0-0040/iio\\:device0/in_power1_input"}
+		channels["VDD_SYS_SOC"] = devices
+
+	} else if strings.Contains(model, "Xavier NX") {
+		// xavier nx
+		devices := []string{"/sys/bus/i2c/drivers/ina3221/7-0040/hwmon/hwmon4/in1_input", "/sys/bus/i2c/drivers/ina3221/7-0040/hwmon/hwmon4/curr1_input"}
+		channels["VDD_IN"] = devices
+
+		devices = []string{"/sys/bus/i2c/drivers/ina3221/7-0040/hwmon/hwmon4/in2_input", "/sys/bus/i2c/drivers/ina3221/7-0040/hwmon/hwmon4/curr2_input"}
+		channels["VDD_CPU_GPU_CV"] = devices
+
+		devices = []string{"/sys/bus/i2c/drivers/ina3221/7-0040/hwmon/hwmon4/in3_input", "/sys/bus/i2c/drivers/ina3221/7-0040/hwmon/hwmon4/curr3_input"}
+		channels["VDD_SOC"] = devices
+
+	} else if strings.Contains(model, "Orin Nano") {
+		// orin nano
+		devices := []string{"/sys/bus/i2c/drivers/ina3221/1-0040/hwmon/hwmon3/in1_input", "/sys/bus/i2c/drivers/ina3221/1-0040/hwmon/hwmon3/curr1_input"}
+		channels["VDD_IN"] = devices
+
+		devices = []string{"/sys/bus/i2c/drivers/ina3221/1-0040/hwmon/hwmon3/in2_input", "/sys/bus/i2c/drivers/ina3221/1-0040/hwmon/hwmon3/curr2_input"}
+		channels["VDD_CPU_GPU_CV"] = devices
+
+		devices = []string{"/sys/bus/i2c/drivers/ina3221/1-0040/hwmon/hwmon3/in3_input", "/sys/bus/i2c/drivers/ina3221/1-0040/hwmon/hwmon3/curr3_input"}
+		channels["VDD_SOC"] = devices
+	} else {
+		return nil
+	}
+
+	return Arm64GpuPowerInstrument{channels}
 }
