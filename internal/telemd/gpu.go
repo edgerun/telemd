@@ -429,21 +429,22 @@ func (x arm64InstrumentFactory) NewGpuPowerInstrument(devices map[int]string) In
 
 	channels := make(map[string][]string)
 
-	if model == "quill" || strings.Contains(model, "TX2") {
+	if strings.Contains(model, "quill") || strings.Contains(model, "TX2") {
+		// Check names of inputs: sudo cat /sys/bus/i2c/drivers/ina3221x/0-0040/iio\:device0/rail_name_1, and so on
 		// tx2
-		devices := []string{"/sys/bus/i2c/drivers/ina3221x/0-0041/iio\\:device1/in_power0_input"}
+		devices := []string{"/sys/bus/i2c/drivers/ina3221x/0-0041/iio:device1/in_power0_input"}
 		channels["VDD_IN"] = devices
 
-		devices = []string{"/sys/bus/i2c/drivers/ina3221x/0-0041/iio\\:device1/in_power1_input"}
+		devices = []string{"/sys/bus/i2c/drivers/ina3221x/0-0041/iio:device1/in_power1_input"}
 		channels["VDD_SYS_CPU"] = devices
 
-		devices = []string{"/sys/bus/i2c/drivers/ina3221x/0-0041/iio\\:device0/in_power2_input"}
+		devices = []string{"/sys/bus/i2c/drivers/ina3221x/0-0041/iio:device1/in_power2_input"}
 		channels["VDD_SYS_DDR"] = devices
 
-		devices = []string{"/sys/bus/i2c/drivers/ina3221x/0-0040/iio\\:device0/in_power0_input"}
+		devices = []string{"/sys/bus/i2c/drivers/ina3221x/0-0040/iio:device0/in_power0_input"}
 		channels["VDD_SYS_GPU"] = devices
 
-		devices = []string{"/sys/bus/i2c/drivers/ina3221x/0-0040/iio\\:device0/in_power1_input"}
+		devices = []string{"/sys/bus/i2c/drivers/ina3221x/0-0040/iio:device0/in_power1_input"}
 		channels["VDD_SYS_SOC"] = devices
 
 	} else if strings.Contains(model, "Xavier NX") {
