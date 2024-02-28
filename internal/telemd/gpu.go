@@ -51,7 +51,7 @@ func readJetsonFrequency() (float64, error) {
 
 	var folder string
 
-	if model == "quill" || strings.Contains(model, "TX2") {
+	if strings.Contains(model, "quill") || strings.Contains(model, "TX2") {
 		// tx2
 		folder = "17000000.gp10b"
 	} else if strings.Contains(model, "Xavier NX") {
@@ -113,7 +113,7 @@ func arm64Gpu() ([]string, error) {
 		// according to the blog post above, jetson tx1 has the same id as tx1
 		// problem: /proc/device-tree/model not available in container
 		return []string{"0-Jetson Nano"}, nil
-	} else if model == "quill" || strings.Contains(model, "TX2") {
+	} else if strings.Contains(model, "quill") || strings.Contains(model, "TX2") {
 		return []string{"0-Jetson TX2"}, nil
 	} else if strings.Contains(model, "Xavier NX") {
 		return []string{"0-Jetson Xavier NX"}, nil
